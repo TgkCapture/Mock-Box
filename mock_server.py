@@ -13,15 +13,12 @@ def get_phone_numbers():
     phone_numbers = generate_mock_phone_numbers()
     return jsonify(phone_numbers)
 
-def generate_mock_phone_numbers():
-    # Simulating a list of phone numbers
-    return [
-        "+265881124753",
-        "+265881124753",
-        "+265881124753",
-        "+265881124753",
-        "+265881124753"
-    ]
+def generate_mock_phone_numbers(count=50):
+    phone_numbers = []
+    for _ in range(count):
+        number = "+26588" + "".join([str(random.randint(0, 9)) for _ in range(7)])
+        phone_numbers.append(number)
+    return phone_numbers
 
 @app.route('/api/error', methods=['GET'])
 def error_simulation():
