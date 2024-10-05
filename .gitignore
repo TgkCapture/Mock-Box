@@ -1,0 +1,6 @@
+#ignored files
+
+venv/
+.history/
+
+*.ini
