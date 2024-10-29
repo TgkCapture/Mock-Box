@@ -20,10 +20,16 @@ def create_app():
     from .routes.phone_numbers import phone_numbers_bp
     from .routes.errors import errors_bp
     from .routes.data import data_bp
-    
+    from .routes.products import products_bp
+    from .routes.users import users_bp
+    from .routes.orders import orders_bp
+
     app.register_blueprint(phone_numbers_bp, url_prefix='/api')
     app.register_blueprint(errors_bp, url_prefix='/api')
     app.register_blueprint(data_bp, url_prefix='/api')
+    app.register_blueprint(products_bp, url_prefix='/api')
+    app.register_blueprint(users_bp, url_prefix='/api')
+    app.register_blueprint(orders_bp, url_prefix='/api')
     
     # After request logging
     @app.after_request
