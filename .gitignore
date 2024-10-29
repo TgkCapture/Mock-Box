@@ -4,3 +4,4 @@ venv/
 .history/
 
 *.ini
+*.pyc
