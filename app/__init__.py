@@ -23,6 +23,9 @@ def create_app():
     from .routes.products import products_bp
     from .routes.users import users_bp
     from .routes.orders import orders_bp
+    from .routes.rss_feed import rss_feed_bp
+    from .routes.credit_lines import credit_lines_bp
+    from .routes.user_activities import user_activities_bp
 
     app.register_blueprint(phone_numbers_bp, url_prefix='/api')
     app.register_blueprint(errors_bp, url_prefix='/api')
@@ -30,6 +33,9 @@ def create_app():
     app.register_blueprint(products_bp, url_prefix='/api')
     app.register_blueprint(users_bp, url_prefix='/api')
     app.register_blueprint(orders_bp, url_prefix='/api')
+    app.register_blueprint(rss_feed_bp, url_prefix='/api')
+    app.register_blueprint(credit_lines_bp, url_prefix='/api')
+    app.register_blueprint(user_activities_bp, url_prefix='/api')
     
     # After request logging
     @app.after_request
