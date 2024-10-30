@@ -70,7 +70,7 @@ Mock-Box is a versatile mock server built with Flask, designed to provide JSON r
 
 4. Run the server:
    ```bash
-   python run.py
+   python mock_server.py
    ```
 
 The server will start at `http://127.0.0.1:<port>` (replace `<port>` with the port you specified in `config.ini`).
