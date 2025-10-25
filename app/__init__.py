@@ -1,3 +1,4 @@
+# app/__init__.py
 from flask import Flask, request
 from configparser import ConfigParser
 import os
@@ -16,7 +17,11 @@ def create_app():
     # Load config
     app.config.update(load_config())
     
-    # Register Blueprints
+    # Register Home Blueprint (root routes)
+    from .home import home_bp
+    app.register_blueprint(home_bp)
+    
+    # Register API Blueprints
     from .routes.phone_numbers import phone_numbers_bp
     from .routes.errors import errors_bp
     from .routes.data import data_bp
