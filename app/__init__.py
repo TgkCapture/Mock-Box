@@ -6,9 +6,13 @@ import os
 def load_config():
     config = ConfigParser()
     config.read('config.ini')
+    
+    secret_key = config.get('server', 'secret_key', fallback='default-12345-secret-key')
+    
     return {
         'PORT': int(config['server']['port']),
-        'DEBUG': config['server'].getboolean('debug')
+        'DEBUG': config['server'].getboolean('debug'),
+        'SECRET_KEY': secret_key
     }
 
 def create_app():
@@ -20,6 +24,10 @@ def create_app():
     # Register Home Blueprint (root routes)
     from .home import home_bp
     app.register_blueprint(home_bp)
+    
+    # Register Authentication Blueprint
+    from .routes.auth import auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/api')
     
     # Register API Blueprints
     from .routes.phone_numbers import phone_numbers_bp
