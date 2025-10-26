@@ -1,3 +1,4 @@
+# app/routes/user_activities.py
 from flask import Blueprint, jsonify
 from datetime import datetime, timedelta
 import random

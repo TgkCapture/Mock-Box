@@ -1,3 +1,4 @@
+# app/routes/products.py
 from flask import Blueprint, jsonify
 import random
 

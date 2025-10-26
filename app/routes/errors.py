@@ -1,3 +1,4 @@
+# app/routes/errors.py
 from flask import Blueprint, jsonify
 
 errors_bp = Blueprint('errors', __name__)
