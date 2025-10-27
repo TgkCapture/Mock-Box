@@ -2,3 +2,6 @@
 port = 5000
 debug = True
 secret_key =
+
+[auth]
+admin_api_keys =
