@@ -5,23 +5,88 @@ import base64
 import jwt
 import datetime
 import secrets
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 class AuthManager:
     def __init__(self, app=None):
         self.app = app
         self.tokens = set()  
+        self.admin_api_keys = set() 
+        
+        if app is not None:
+            self.init_app(app)
         
     def init_app(self, app):
         """Initialize with Flask app context"""
         self.app = app
+        self.load_admin_keys()
         
+    def load_admin_keys(self):
+        """Load admin-configured API keys from environment or config"""
+        try:
+            # Try to get from app config first
+            if self.app and hasattr(self.app, 'config'):
+                admin_keys_env = self.app.config.get('ADMIN_API_KEYS', '')
+                if admin_keys_env:
+                    keys = [key.strip() for key in admin_keys_env.split(',') if key.strip()]
+                    self.admin_api_keys.update(keys)
+            
+            # Load from config file
+            try:
+                from configparser import ConfigParser
+                config = ConfigParser()
+                config.read('config.ini')
+                if config.has_option('auth', 'admin_api_keys'):
+                    keys = [key.strip() for key in config.get('auth', 'admin_api_keys').split(',') if key.strip()]
+                    self.admin_api_keys.update(keys)
+            except Exception as e:
+                print(f"Warning: Could not load admin keys from config: {e}")
+                
+        except Exception as e:
+            print(f"Warning: Could not load admin keys: {e}")
+    
     def get_secret_key(self):
         """Get secret key from app config"""
-        if self.app and hasattr(self.app, 'config'):
-            return self.app.config.get('secret_key', 'default-12345-secret-key')
+        try:
+            if self.app and hasattr(self.app, 'config'):
+                return self.app.config.get('SECRET_KEY', 'mock-server-secret-key-123')
+            
+            return current_app.config.get('SECRET_KEY', 'mock-server-secret-key-123')
+        except RuntimeError:
         
-        return current_app.config.get('secret_key', 'default-12345-secret-key')
+            return 'mock-server-secret-key-123'
+    
+    def add_admin_api_key(self, api_key: str):
+        """Add an admin API key"""
+        self.admin_api_keys.add(api_key)
+        self.save_admin_keys()
+    
+    def remove_admin_api_key(self, api_key: str):
+        """Remove an admin API key"""
+        self.admin_api_keys.discard(api_key)
+        self.save_admin_keys()
+    
+    def save_admin_keys(self):
+        """Save admin keys to config file"""
+        try:
+            from configparser import ConfigParser
+            config = ConfigParser()
+            config.read('config.ini')
+            if not config.has_section('auth'):
+                config.add_section('auth')
+            config.set('auth', 'admin_api_keys', ','.join(self.admin_api_keys))
+            with open('config.ini', 'w') as configfile:
+                config.write(configfile)
+        except Exception as e:
+            print(f"Error saving admin keys: {e}")
+    
+    def get_admin_api_keys(self) -> List[str]:
+        """Get all admin API keys"""
+        return list(self.admin_api_keys)
+    
+    def verify_api_key(self, api_key: str) -> bool:
+        """Verify API key (both generated and admin keys)"""
+        return api_key in self.tokens or api_key in self.admin_api_keys
     
     # JWT Token Methods
     def generate_jwt_token(self, payload: Dict[str, Any]) -> str:
@@ -49,10 +114,6 @@ class AuthManager:
         self.tokens.add(api_key)
         return api_key
     
-    def verify_api_key(self, api_key: str) -> bool:
-        """Verify API key"""
-        return api_key in self.tokens
-    
     # OAuth2 Methods
     def generate_oauth_token(self) -> Dict[str, Any]:
         """Generate OAuth2 style token"""
@@ -66,7 +127,7 @@ class AuthManager:
         self.tokens.add(token_data['access_token'])
         return token_data
 
-# Initialize auth manager
+# Initialize auth manager (without loading admin keys yet)
 auth_manager = AuthManager()
 
 # Authentication decorators
