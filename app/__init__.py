@@ -20,6 +20,10 @@ def create_app():
     
     # Load config
     app.config.update(load_config())
+
+    # Initialize auth manager with app context
+    from .auth import auth_manager
+    auth_manager.init_app(app)
     
     # Register Home Blueprint (root routes)
     from .home import home_bp
@@ -28,6 +32,10 @@ def create_app():
     # Register Authentication Blueprint
     from .routes.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api')
+
+    # Register Admin Blueprint
+    from .routes.admin import admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/api')
     
     # Register API Blueprints
     from .routes.phone_numbers import phone_numbers_bp
