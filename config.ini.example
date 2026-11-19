@@ -1,7 +1,20 @@
+# Copy to config.ini and adjust. Every setting is optional; each can also be set with an
+# environment variable (shown in brackets), which takes precedence over this file.
+
 [server]
+# Interface to bind. Keep 127.0.0.1 unless you understand the risk. [MOCKBOX_HOST]
+host = 127.0.0.1
+# [MOCKBOX_PORT]
 port = 5000
-debug = True
+# Flask debug mode. Never enable on a non-loopback host. [MOCKBOX_DEBUG]
+debug = false
+# Signs JWTs. Leave empty for a random per-run key (tokens die on restart).
+# Generate one with: python -c "import secrets; print(secrets.token_hex(32))" [MOCKBOX_SECRET_KEY]
 secret_key =
+# Comma-separated allowed CORS origins, "*" for any, empty to disable. [MOCKBOX_CORS_ORIGINS]
+cors_origins = *
 
 [auth]
+# Comma-separated admin API keys for /api/admin/*. Empty disables the admin API.
+# [MOCKBOX_ADMIN_API_KEYS]
 admin_api_keys =
