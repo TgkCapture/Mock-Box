@@ -15,6 +15,8 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Mapping, Optional, Tuple
 
+from .features import ALL as ALL_FEATURES, FeatureError, parse_features
+
 log = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_FILE = "config.ini"
@@ -37,6 +39,7 @@ class Settings:
     admin_api_keys: Tuple[str, ...] = ()
     cors_origins: Tuple[str, ...] = ("*",)
     mocks_files: Tuple[str, ...] = ()
+    features: Tuple[str, ...] = ALL_FEATURES
     # True when no secret was configured and a random one was generated.
     secret_key_generated: bool = False
 
@@ -76,12 +79,20 @@ def _parse_str(value: str, name: str) -> str:
     return value.strip()
 
 
+def _parse_features(value: str, name: str) -> Tuple[str, ...]:
+    try:
+        return parse_features(value)
+    except FeatureError as exc:
+        raise ConfigError(f"{name}: {exc}") from None
+
+
 _FIELDS = (
     ("server", "host", "MOCKBOX_HOST", "host", _parse_str),
     ("server", "port", "MOCKBOX_PORT", "port", _parse_port),
     ("server", "debug", "MOCKBOX_DEBUG", "debug", _parse_bool),
     ("server", "secret_key", "MOCKBOX_SECRET_KEY", "secret_key", _parse_str),
     ("server", "cors_origins", "MOCKBOX_CORS_ORIGINS", "cors_origins", _parse_list),
+    ("server", "features", "MOCKBOX_FEATURES", "features", _parse_features),
     ("auth", "admin_api_keys", "MOCKBOX_ADMIN_API_KEYS", "admin_api_keys", _parse_list),
     ("mocks", "files", "MOCKBOX_MOCKS", "mocks_files", _parse_list),
 )
