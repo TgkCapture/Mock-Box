@@ -106,6 +106,9 @@ All of these are `GET` requests and accept the [request controls](#request-contr
 | `/api/orders`                | 3  | `order_id`, `user_id`, `product_id`, `product`, `quantity`, `unit_price`, `total_price`, `status`, `order_date` |
 | `/api/credit-lines`          | 5  | `credit_line_id`, `customer_name`, `credit_limit`, `balance`, `available_credit`, `status` |
 | `/api/user-activities`       | 10 | `activity_id`, `user_id`, `activity_type`, `timestamp` (newest first) |
+| `/api/posts`                 | 10 | `id`, `user_id`, `title`, `body`, `published`, `created_at` |
+| `/api/comments`              | 10 | `id`, `post_id`, `name`, `email`, `body` |
+| `/api/todos`                 | 10 | `id`, `user_id`, `title`, `completed` |
 | `/api/rss-feed`              | 5  | A feed channel with items. Add `?format=xml` for real RSS 2.0 XML. |
 | `/api/data?type=numbers`     | 50 | A list of phone numbers |
 | `/api/data?type=names`       | 10 | A list of `{id, name}` objects |
@@ -137,8 +140,8 @@ Controls are applied before authentication, so `?status=` works on protected end
 
 ### Pagination, sorting and filtering
 
-`/api/users`, `/api/products`, `/api/orders`, `/api/credit-lines` and `/api/user-activities`
-also support the parameters below. If you don't pass any of them, the response is a plain array, as before.
+All list endpoints (users, products, orders, credit lines, user activities, posts, comments, todos
+and every `/api/store` collection) also support the parameters below. If you don't pass any of them, the response is a plain array, as before.
 
 | Parameter | Example | Effect |
 |-----------|---------|--------|
@@ -158,6 +161,36 @@ When paginating:
 
 ```bash
 curl -i "http://127.0.0.1:5000/api/orders?page=2&per_page=5&sort=-total_price&filter[status]=paid"
+```
+
+## Stateful CRUD (`/api/store`)
+
+`/api/users` and the other mock endpoints return fresh random data on every call. To test
+create, update and delete flows, use the store instead. It's a schemaless in-memory database
+that remembers your changes.
+
+| Request | Effect |
+|---------|--------|
+| `GET /api/store` | List collections and their sizes. |
+| `GET /api/store/{collection}` | List items. Supports [pagination, sorting and filtering](#pagination-sorting-and-filtering). |
+| `POST /api/store/{collection}` | Create an item from any JSON object. Returns `201` with a `Location` header. |
+| `GET /api/store/{collection}/{id}` | Get one item. |
+| `PUT /api/store/{collection}/{id}` | Replace an item. |
+| `PATCH /api/store/{collection}/{id}` | Merge fields into an item. |
+| `DELETE /api/store/{collection}/{id}` | Delete an item (`204`). |
+| `DELETE /api/store/{collection}` | Drop a whole collection. |
+| `POST /api/store/reset` | Restore the seed data and drop any custom collections. |
+
+- **Seeded collections:** `users` (10), `products` (20), `orders` (30), `posts` (20), `comments` (50) and `todos` (40). The seed data is the same on every start.
+- **New collections:** `POST` to any new name, for example `/api/store/invoices`, and the collection is created on the spot.
+- **IDs:** assigned automatically as integers, unless you send your own `id` (string or integer). A duplicate `id` returns `409`.
+- **Timestamps:** `created_at` and `updated_at` are maintained for you.
+- **Linking resources:** use filters, for example `GET /api/store/comments?filter[post_id]=3`.
+- **Limits:** up to 100 collections and 10,000 items per collection. Data lives in memory, so a restart restores the seed data.
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/store/todos -H "Content-Type: application/json" -d '{"title": "Ship v1", "completed": false}'
+curl -X PATCH http://127.0.0.1:5000/api/store/todos/41 -H "Content-Type: application/json" -d '{"completed": true}'
 ```
 
 ## Debugging requests

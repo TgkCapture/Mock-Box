@@ -99,8 +99,29 @@ def _matches(value: Any, op: str, target: Any) -> bool:
         return False
 
 
+def _fields(items: List[Item]) -> Dict[str, Any]:
+    """Every field seen in the items, mapped to its first non-null value (used for type coercion)."""
+    fields: Dict[str, Any] = {}
+    for item in items:
+        for key, value in item.items():
+            if fields.get(key) is None:
+                fields[key] = value
+    return fields
+
+
+def _sort_key(value: Any) -> Tuple[int, Any]:
+    """Order None last and never compare values of different types."""
+    if value is None:
+        return (3, 0)
+    if isinstance(value, (int, float)):
+        return (0, value)
+    if isinstance(value, str):
+        return (1, value)
+    return (2, str(value))
+
+
 def apply_filters(items: List[Item]) -> List[Item]:
-    sample = items[0] if items else {}
+    sample = _fields(items)
     for key in request.args:
         if not key.startswith("filter["):
             continue
@@ -114,12 +135,12 @@ def apply_filters(items: List[Item]) -> List[Item]:
         if op in ("eq", "ne"):
             targets = [_coerce(v.strip(), sample.get(field), field) for v in raw.split(",")]
             if op == "eq":
-                items = [i for i in items if i[field] in targets]
+                items = [i for i in items if i.get(field) in targets]
             else:
-                items = [i for i in items if i[field] not in targets]
+                items = [i for i in items if i.get(field) not in targets]
         else:
             target = raw if op == "contains" else _coerce(raw, sample.get(field), field)
-            items = [i for i in items if _matches(i[field], op, target)]
+            items = [i for i in items if field in i and _matches(i[field], op, target)]
 
     query = request.args.get("q", "").strip().lower()
     if query:
@@ -131,16 +152,17 @@ def apply_sort(items: List[Item]) -> List[Item]:
     spec = request.args.get("sort", "").strip()
     if not spec or not items:
         return items
+    known = _fields(items)
     fields: List[Tuple[str, bool]] = []
     for part in spec.split(","):
         part = part.strip()
         desc = part.startswith("-")
         name = part.lstrip("-+")
-        if name not in items[0]:
-            raise ApiError(400, f"Cannot sort on unknown field {name!r}; fields: {', '.join(items[0])}")
+        if name not in known:
+            raise ApiError(400, f"Cannot sort on unknown field {name!r}; fields: {', '.join(known)}")
         fields.append((name, desc))
     for name, desc in reversed(fields):  # stable multi-key sort
-        items = sorted(items, key=lambda i: i[name], reverse=desc)
+        items = sorted(items, key=lambda i: _sort_key(i.get(name)), reverse=desc)
     return items
 
 
@@ -171,13 +193,19 @@ def decode_cursor(cursor: str) -> int:
 
 # --------------------------------------------------------------------------- entry point
 def list_response(generate: Callable[[int], List[Item]], default_count: int):
-    """Build the response for a list endpoint. ``generate(n)`` returns ``n`` items."""
+    """Response for a generated list endpoint. ``generate(n)`` returns ``n`` items."""
     mode = _mode()
-    envelope = _truthy("envelope")
     if mode:
         _stabilize()
     count = count_arg(PAGINATED_DEFAULT_COUNT if mode else default_count)
-    items = apply_sort(apply_filters(generate(count)))
+    return respond_with_items(generate(count))
+
+
+def respond_with_items(items: List[Item]):
+    """Filter, sort and paginate an existing list according to the query string."""
+    mode = _mode()
+    envelope = _truthy("envelope")
+    items = apply_sort(apply_filters(items))
     total = len(items)
 
     if mode is None:

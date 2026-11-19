@@ -10,6 +10,7 @@ from .auth import EXTENSION_KEY, AuthManager
 from .config import Settings, load_settings
 from .errors import register_error_handlers
 from .inspector import Inspector
+from .store import EXTENSION_KEY as STORE_KEY, Store
 
 MAX_REQUEST_BYTES = 10 * 1024 * 1024
 
@@ -36,6 +37,7 @@ def create_app(settings: Optional[Settings] = None, config_path: Optional[str] =
     app.json.sort_keys = False
     app.extensions[EXTENSION_KEY] = AuthManager(settings.secret_key, settings.admin_api_keys)
 
+    app.extensions[STORE_KEY] = Store()
     Inspector().init_app(app)
     register_error_handlers(app)
     _register_cors(app, settings.cors_origins)

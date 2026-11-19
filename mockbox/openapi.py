@@ -71,6 +71,11 @@ def _op(
     return op
 
 
+_NOT_FOUND = {"404": {"$ref": "#/components/responses/Error"}}
+_COLLECTION = {"name": "collection", "in": "path", "required": True, "schema": {"type": "string"}, "example": "users"}
+_ITEM_ID = {"name": "item_id", "in": "path", "required": True, "schema": {"type": "string"}, "example": "1"}
+
+
 def _query(name: str, description: str, schema: Dict[str, Any]) -> Dict[str, Any]:
     return {"name": name, "in": "query", "required": False, "description": description, "schema": schema}
 
@@ -198,6 +203,30 @@ def build_spec(version: str) -> Dict[str, Any]:
         "/api/products": {"get": _op("Mock data", "Products", controls=True, listing=True)},
         "/api/users": {"get": _op("Mock data", "Users", controls=True, listing=True)},
         "/api/orders": {"get": _op("Mock data", "Orders", controls=True, listing=True)},
+        "/api/posts": {"get": _op("Mock data", "Posts", controls=True, listing=True)},
+        "/api/comments": {"get": _op("Mock data", "Comments", controls=True, listing=True)},
+        "/api/todos": {"get": _op("Mock data", "Todos", controls=True, listing=True)},
+        # ---------------------------------------------------------------- store (stateful CRUD)
+        "/api/store": {"get": _op("Store", "List collections and item counts")},
+        "/api/store/reset": {"post": _op("Store", "Restore the seed data (drops custom collections)")},
+        "/api/store/{collection}": {
+            "get": _op("Store", "List items (supports pagination, sort and filters)", params=[_COLLECTION], listing=True, extra_errors=_NOT_FOUND),
+            "post": _op(
+                "Store",
+                "Create an item (creates the collection if needed)",
+                params=[_COLLECTION],
+                body=_json_body({"name": "Widget", "price": 9.99}, "Any JSON object; id is assigned unless given"),
+                ok="201",
+                extra_errors={"409": {"$ref": "#/components/responses/Error"}},
+            ),
+            "delete": _op("Store", "Drop a collection", params=[_COLLECTION], extra_errors=_NOT_FOUND),
+        },
+        "/api/store/{collection}/{item_id}": {
+            "get": _op("Store", "Get an item", params=[_COLLECTION, _ITEM_ID], extra_errors=_NOT_FOUND),
+            "put": _op("Store", "Replace an item", params=[_COLLECTION, _ITEM_ID], body=_json_body({"name": "Widget", "price": 12.5}, "Full replacement"), extra_errors=_NOT_FOUND),
+            "patch": _op("Store", "Update fields of an item", params=[_COLLECTION, _ITEM_ID], body=_json_body({"price": 12.5}, "Fields to merge"), extra_errors=_NOT_FOUND),
+            "delete": {**_op("Store", "Delete an item", params=[_COLLECTION, _ITEM_ID], extra_errors=_NOT_FOUND), "responses": {"204": {"description": "Deleted"}, **_NOT_FOUND}},
+        },
         "/api/credit-lines": {"get": _op("Mock data", "Credit lines", controls=True, listing=True)},
         "/api/user-activities": {"get": _op("Mock data", "User activities", controls=True, listing=True)},
         "/api/rss-feed": {
@@ -256,6 +285,7 @@ def build_spec(version: str) -> Dict[str, Any]:
         },
         "tags": [
             {"name": "Mock data"},
+            {"name": "Store", "description": "Stateful CRUD. Changes persist in memory until reset or restart."},
             {"name": "Auth", "description": "Obtain test credentials, then click Authorize."},
             {"name": "Admin", "description": "Requires an admin API key from configuration."},
             {"name": "Errors"},

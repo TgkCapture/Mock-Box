@@ -21,6 +21,7 @@ from . import (
     activities,
     admin,
     auth,
+    content,
     credit_lines,
     data,
     echo,
@@ -31,6 +32,7 @@ from . import (
     products,
     rss_feed,
     simulate,
+    store,
     users,
 )
 
@@ -45,6 +47,8 @@ MOCK_BLUEPRINTS = (
     activities.bp,
     simulate.bp,
     echo.bp,
+    content.bp,
+    store.bp,
 )
 
 

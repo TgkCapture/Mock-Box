@@ -14,6 +14,8 @@
 - `/api/echo` returns the request back (headers, query, JSON, form, files, raw body).
 - Request inspector: live `/inspect` page and `/api/inspector/requests` API with masked credentials.
 - Request bodies are limited to 10 MB (`413` beyond that).
+- Stateful CRUD store at `/api/store/{collection}`: seeded collections, ad-hoc collections, reset.
+- `/api/posts`, `/api/comments` and `/api/todos` mock endpoints.
 
 ## 0.1.0: first public release
 

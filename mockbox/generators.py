@@ -161,3 +161,54 @@ def rss_items(rng: random.Random, now: datetime, count: int) -> List[Dict[str, A
         }
         for i, stamp in enumerate(stamps, start=1)
     ]
+
+
+WORDS = (
+    "api client mock server request response token data test build deploy cache queue event "
+    "user order product payment invoice report update release feature bug fix design review "
+    "team project service network mobile money market price stock delivery customer support"
+).split()
+
+
+def _sentence(rng: random.Random, low: int = 5, high: int = 12) -> str:
+    words = [rng.choice(WORDS) for _ in range(rng.randint(low, high))]
+    return " ".join(words).capitalize() + "."
+
+
+def _paragraph(rng: random.Random, sentences: int = 3) -> str:
+    return " ".join(_sentence(rng) for _ in range(sentences))
+
+
+def posts(rng: random.Random, now: datetime, count: int, users: int = 10) -> List[Dict[str, Any]]:
+    return [
+        {
+            "id": i,
+            "user_id": rng.randint(1, users),
+            "title": _sentence(rng, 3, 7).rstrip("."),
+            "body": _paragraph(rng, rng.randint(2, 4)),
+            "published": rng.random() < 0.8,
+            "created_at": iso(now - timedelta(days=rng.randint(0, 365), seconds=rng.randrange(86400))),
+        }
+        for i in range(1, count + 1)
+    ]
+
+
+def comments(rng: random.Random, count: int, posts: int = 20) -> List[Dict[str, Any]]:
+    result = []
+    for i in range(1, count + 1):
+        first, last = rng.choice(FIRST_NAMES), rng.choice(LAST_NAMES)
+        result.append({
+            "id": i,
+            "post_id": rng.randint(1, posts),
+            "name": f"{first} {last}",
+            "email": f"{first}.{last}@example.com".lower(),
+            "body": _sentence(rng, 6, 18),
+        })
+    return result
+
+
+def todos(rng: random.Random, count: int, users: int = 10) -> List[Dict[str, Any]]:
+    return [
+        {"id": i, "user_id": rng.randint(1, users), "title": _sentence(rng, 3, 8).rstrip("."), "completed": rng.random() < 0.4}
+        for i in range(1, count + 1)
+    ]
