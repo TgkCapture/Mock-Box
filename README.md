@@ -71,7 +71,7 @@ curl "http://127.0.0.1:5000/api/users?count=2&seed=demo"
 ### Command line
 
 ```text
-mockbox [--config PATH] [--host HOST] [--port PORT] [--debug | --no-debug] [--version]
+mockbox [--config PATH] [--host HOST] [--port PORT] [--mocks FILE ...] [--debug | --no-debug] [--version]
 ```
 
 ## Configuration
@@ -92,6 +92,7 @@ cp config.ini.example config.ini
 | `[server] secret_key`         | `MOCKBOX_SECRET_KEY`     | random      | Signs JWTs. If empty, a random key is used and tokens stop working after a restart. |
 | `[server] cors_origins`       | `MOCKBOX_CORS_ORIGINS`   | `*`         | Comma-separated allowed origins. Empty disables CORS. |
 | `[auth] admin_api_keys`       | `MOCKBOX_ADMIN_API_KEYS` | *(none)*    | Comma-separated admin keys. If empty, the admin API is disabled. |
+| `[mocks] files`               | `MOCKBOX_MOCKS`          | *(none)*    | Comma-separated [custom route](#custom-routes) files. |
 
 Generate a secret key with `python -c "import secrets; print(secrets.token_hex(32))"`.
 
@@ -162,6 +163,81 @@ When paginating:
 ```bash
 curl -i "http://127.0.0.1:5000/api/orders?page=2&per_page=5&sort=-total_price&filter[status]=paid"
 ```
+
+## Custom routes
+
+Describe your own endpoints in a JSON or YAML file and Mock-Box serves them. They can live at
+any path, such as `/v1/payments/{id}`, and can even override a built-in endpoint.
+
+```bash
+mockbox --mocks mocks.yaml                     # repeat --mocks for several files
+# or: [mocks] files = mocks.yaml in config.ini, or MOCKBOX_MOCKS=mocks.yaml
+```
+
+```yaml
+routes:
+  - path: /v1/customers/{id}
+    body:
+      id: "{{params.id}}"
+      name: "{{name}}"
+      email: "{{email}}"
+      balance: "{{random.float(0, 5000)}}"
+
+  - path: /v1/customers
+    body:
+      data:
+        $repeat: "{{query.limit | 3}}"        # list of N generated items
+        item: { id: "{{index}}", name: "{{name}}" }
+
+  - method: POST
+    path: /v1/login
+    responses:                                 # first matching `when` wins
+      - when: { body: { username: admin, password: secret } }
+        body: { token: "{{uuid}}" }
+    status: 401                                # otherwise
+    body: { error: invalid_credentials }
+
+  - path: /v1/flaky
+    mode: sequence                             # 503, 503, 200, then repeat
+    responses:
+      - { status: 503 }
+      - { status: 503 }
+      - { body: { ok: true } }
+```
+
+[`examples/mocks.yaml`](examples/mocks.yaml) is a commented tour of every option. In summary:
+
+| Key | Meaning |
+|-----|---------|
+| `path` | Required. `{name}` captures a path segment. |
+| `method` | `GET` (default), a list such as `[PUT, PATCH]`, or `ANY`. |
+| `status`, `headers`, `content_type` | Response status (default 200), headers (templated) and content type. |
+| `body` / `body_file` | Inline body (an object or list becomes JSON, a string becomes text), or a file relative to the mocks file. A `.json` file is templated; other files are served as-is. |
+| `delay_ms` | Fixed latency, in addition to `?delay=`. |
+| `auth` | `any`, or one or more of `jwt`, `bearer`, `api_key`, `basic`. Uses the same credentials as the [built-in auth](#authentication). |
+| `responses` + `when` | Conditional responses matched on `query`, `headers`, `params` or `body` (dotted paths). A list means "any of", and `"*"` means "present". |
+| `mode: sequence` | Return `responses` in order, then cycle. Useful for testing retries. |
+| `description` | Shown in `/docs` and on the home page. |
+
+**Placeholders:**
+
+| Group | Placeholders |
+|-------|--------------|
+| From the request | `{{params.x}}`, `{{query.x}}`, `{{headers.x}}`, `{{body.a.b}}` |
+| Generated | `{{uuid}}`, `{{now}}`, `{{date}}`, `{{timestamp}}`, `{{name}}`, `{{first_name}}`, `{{last_name}}`, `{{email}}`, `{{phone}}`, `{{word}}`, `{{sentence}}`, `{{paragraph}}`, `{{bool}}`, `{{index}}` |
+| Random | `{{random.int(1,10)}}`, `{{random.float(0,1)}}`, `{{random.choice(a,b,c)}}` |
+| Default value | `{{query.page \| 1}}` (used when the value is missing) |
+
+How placeholders behave:
+- **Types are kept** when a string is exactly one placeholder: `"{{random.int(1,9)}}"` renders as a number.
+- **Consistent people:** `name`, `first_name`, `last_name` and `email` describe the same generated person within an object.
+- **Request controls work too:** `?seed=` makes generated values reproducible, and `?delay=` and `?status=` apply as usual.
+
+**Reloading and errors:**
+- **Hot reload:** the file is re-read automatically when it changes. If an edit is invalid, the previous routes stay active and the error is shown at `GET /api/mocks`.
+- **Startup errors:** mistakes are reported with their exact location, for example `mocks.yaml: routes[3].status: ...`. Unknown keys are rejected, so typos don't fail silently.
+- **YAML support** needs `pip install "mock-box[yaml]"`. The Docker image includes it. In Docker, mount your file and point `MOCKBOX_MOCKS` at it:
+  `docker run -p 5000:5000 -v "$PWD/mocks.yaml:/app/mocks.yaml:ro" -e MOCKBOX_MOCKS=/app/mocks.yaml ghcr.io/tgkcapture/mock-box`
 
 ## Stateful CRUD (`/api/store`)
 

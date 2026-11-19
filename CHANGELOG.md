@@ -16,6 +16,9 @@
 - Request bodies are limited to 10 MB (`413` beyond that).
 - Stateful CRUD store at `/api/store/{collection}`: seeded collections, ad-hoc collections, reset.
 - `/api/posts`, `/api/comments` and `/api/todos` mock endpoints.
+- Custom routes from JSON/YAML files (`--mocks`): templated bodies, `$repeat`, conditional and
+  sequence responses, auth, files, hot reload, shown in `/docs`; status at `/api/mocks`.
+- `yaml` extra (PyYAML); the Docker image includes it.
 
 ## 0.1.0: first public release
 

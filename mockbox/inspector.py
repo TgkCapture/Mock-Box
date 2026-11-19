@@ -112,7 +112,9 @@ class Inspector:
 
     @staticmethod
     def _should_record() -> bool:
-        return request.path.startswith("/api/") and not request.path.startswith(IGNORED_PREFIXES) and request.method != "OPTIONS"
+        if request.method == "OPTIONS" or request.path.startswith(IGNORED_PREFIXES):
+            return False
+        return request.path.startswith("/api/") or g.get("custom_route") is not None
 
 
 def get_inspector() -> Inspector:

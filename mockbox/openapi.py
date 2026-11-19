@@ -104,6 +104,32 @@ def _echo_ops(subpath: bool = False) -> Dict[str, Any]:
     return ops
 
 
+def custom_route_paths(routes) -> Dict[str, Dict[str, Any]]:
+    """OpenAPI operations for user-defined custom routes."""
+    paths: Dict[str, Dict[str, Any]] = {}
+    for route in routes:
+        params = [
+            {"name": name, "in": "path", "required": True, "schema": {"type": "string"}}
+            for name in route.regex.groupindex
+        ]
+        security = []
+        if route.auth:
+            names = {"jwt": "BearerAuth", "bearer": "BearerAuth", "api_key": "ApiKeyAuth", "basic": "BasicAuth"}
+            security = [{s: []} for s in dict.fromkeys(names[a] for a in route.auth)]
+        for method in sorted(route.methods - {"HEAD", "OPTIONS"}):
+            op = _op(
+                "Custom",
+                route.description or f"{method} {route.path}",
+                description=f"Defined in `{route.source}`.",
+                controls=True,
+                security=security,
+                params=params,
+                ok=str(route.default.status),
+            )
+            paths.setdefault(route.path, {}).setdefault(method.lower(), op)
+    return paths
+
+
 def build_spec(version: str) -> Dict[str, Any]:
     paths = {
         # ---------------------------------------------------------------- auth
@@ -250,6 +276,7 @@ def build_spec(version: str) -> Dict[str, Any]:
         # ---------------------------------------------------------------- debugging
         "/api/echo": _echo_ops(),
         "/api/echo/{subpath}": _echo_ops(subpath=True),
+        "/api/mocks": {"get": _op("Debugging", "Loaded custom routes and the last reload error")},
         "/api/inspector/requests": {
             "get": _op(
                 "Debugging",
@@ -288,6 +315,7 @@ def build_spec(version: str) -> Dict[str, Any]:
             {"name": "Store", "description": "Stateful CRUD. Changes persist in memory until reset or restart."},
             {"name": "Auth", "description": "Obtain test credentials, then click Authorize."},
             {"name": "Admin", "description": "Requires an admin API key from configuration."},
+            {"name": "Custom", "description": "Your own routes from the mocks file(s)."},
             {"name": "Errors"},
             {"name": "Debugging", "description": "Echo requests and inspect recent traffic (UI at /inspect)."},
             {"name": "Service"},

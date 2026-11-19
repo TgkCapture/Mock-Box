@@ -10,7 +10,7 @@ WORKDIR /app
 
 COPY pyproject.toml README.md LICENSE ./
 COPY mockbox ./mockbox
-RUN pip install ".[server]" \
+RUN pip install ".[server,yaml]" \
     && useradd --create-home --uid 10001 mockbox
 
 USER mockbox
