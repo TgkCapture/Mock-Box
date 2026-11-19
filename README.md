@@ -20,18 +20,49 @@ backend can't easily produce.
 
 ## Quick start
 
-Requires Python 3.10+.
+**Docker** (no Python needed):
 
 ```bash
-git clone https://github.com/TgkCapture/mock-box.git
-cd mock-box
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -e .
+docker run --rm -p 5000:5000 ghcr.io/tgkcapture/mock-box
+```
+
+**pip** (Python 3.10+):
+
+```bash
+pip install "mock-box[server]"
+mockbox
+```
+
+**From source:**
+
+```bash
+git clone https://github.com/TgkCapture/mock-box.git && cd mock-box
+pip install -e ".[server]"
 mockbox                          # or: python -m mockbox
 ```
 
 Open http://127.0.0.1:5000 to see the endpoint list, or http://127.0.0.1:5000/docs to try requests in the browser.
+
+The `server` extra installs [waitress](https://docs.pylonsproject.org/projects/waitress/), a
+production-grade server. Without it, Mock-Box falls back to Flask's development server.
+`--debug` always uses Flask's server.
+
+### Docker
+
+```bash
+# Configure with environment variables...
+docker run --rm -p 5000:5000 \
+  -e MOCKBOX_SECRET_KEY=$(openssl rand -hex 32) \
+  -e MOCKBOX_ADMIN_API_KEYS=my-admin-key-1234567890 \
+  ghcr.io/tgkcapture/mock-box
+
+# ...or mount a config file
+docker run --rm -p 5000:5000 -v "$PWD/config.ini:/app/config.ini:ro" ghcr.io/tgkcapture/mock-box
+```
+
+To run it alongside your app, see [`docker-compose.yml`](docker-compose.yml). Images are
+published for `linux/amd64` and `linux/arm64`. Each release is tagged with its version
+(`0.2.0`, `0.2`) and `latest`.
 
 ```bash
 curl "http://127.0.0.1:5000/api/users?count=2&seed=demo"

@@ -1,0 +1,18 @@
+# Run with: docker compose up
+# Run Mock-Box next to your app; point the app at http://mockbox:5000 (inside compose)
+# or http://localhost:5000 (from your machine).
+services:
+  mockbox:
+    image: ghcr.io/tgkcapture/mock-box:latest
+    # build: .            # uncomment to build from source instead
+    ports:
+      - "5000:5000"
+    environment:
+      # Keep JWTs valid across restarts (generate with: openssl rand -hex 32)
+      MOCKBOX_SECRET_KEY: change-me-to-a-long-random-string
+      # Enables /api/admin/* with this key
+      MOCKBOX_ADMIN_API_KEYS: local-admin-key-change-me
+    # Or mount a config file instead of using environment variables:
+    # volumes:
+    #   - ./config.ini:/app/config.ini:ro
+    restart: unless-stopped

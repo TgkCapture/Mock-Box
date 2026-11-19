@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -20,5 +21,18 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,server]"
       - run: pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build -t mock-box:ci .
+      - name: Smoke test
+        run: |
+          docker run -d --name mockbox -p 5000:5000 mock-box:ci
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:5000/health && break; sleep 1; done
+          curl -fsS "http://127.0.0.1:5000/api/users?count=2&seed=ci"
+          docker logs mockbox

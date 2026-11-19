@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from typing import List, Optional
 
@@ -36,18 +37,36 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"mockbox: configuration error: {exc}", file=sys.stderr)
         return 2
 
-    if settings.host not in LOOPBACK_HOSTS:
-        logging.getLogger("mockbox").warning(
+    log = logging.getLogger("mockbox")
+    exposed = settings.host not in LOOPBACK_HOSTS
+    if exposed and not os.environ.get("MOCKBOX_IN_CONTAINER"):
+        log.warning(
             "Binding to %s exposes the mock server beyond this machine. Mock-Box accepts any Basic "
             "credentials and issues tokens to anyone; only do this on a trusted network.",
             settings.host,
         )
-    if settings.debug and settings.host not in LOOPBACK_HOSTS:
-        logging.getLogger("mockbox").warning("Debug mode on a non-loopback host allows remote code execution.")
+    if settings.debug and exposed:
+        log.warning("Debug mode on a non-loopback host allows remote code execution.")
 
-    app = create_app(settings)
-    app.run(host=settings.host, port=settings.port, debug=settings.debug)
+    serve(create_app(settings), settings.host, settings.port, settings.debug)
     return 0
+
+
+def serve(app, host: str, port: int, debug: bool) -> None:
+    """Use waitress (``pip install mock-box[server]``) when available, else Flask's dev server.
+
+    Both run a single process, which Mock-Box needs because its state lives in memory.
+    """
+    if not debug:
+        try:
+            from waitress import serve as waitress_serve
+        except ImportError:
+            pass
+        else:
+            logging.getLogger("mockbox").info("Mock-Box %s listening on http://%s:%s", __version__, host, port)
+            waitress_serve(app, host=host, port=port, threads=8, ident="mock-box")
+            return
+    app.run(host=host, port=port, debug=debug)
 
 
 if __name__ == "__main__":

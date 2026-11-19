@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Docker image (`ghcr.io/tgkcapture/mock-box`, amd64/arm64) and a `docker-compose.yml` example.
+- `server` extra: when waitress is installed, the `mockbox` CLI serves with it instead of Flask's dev server.
+- Release workflow: pushing a `v*` tag publishes to PyPI and GHCR and creates a GitHub Release.
+- CI builds and smoke-tests the Docker image.
+
 ## 0.1.0: first public release
 
 ### Breaking changes
