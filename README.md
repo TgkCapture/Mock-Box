@@ -1,26 +1,48 @@
 # Mock-Box
 
 [![Tests](https://github.com/TgkCapture/mock-box/actions/workflows/tests.yml/badge.svg)](https://github.com/TgkCapture/mock-box/actions/workflows/tests.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/mock-box.svg)](https://pypi.org/project/mock-box/)
+[![Python](https://img.shields.io/pypi/pyversions/mock-box.svg)](https://pypi.org/project/mock-box/)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Ftgkcapture%2Fmock--box-blue?logo=docker)](https://github.com/TgkCapture/mock-box/pkgs/container/mock-box)
+[![Docs](https://img.shields.io/badge/docs-tgkcapture.github.io%2Fmock--box-blue)](https://tgkcapture.github.io/mock-box/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/TgkCapture/mock-box/blob/main/LICENSE)
 
-Mock-Box is a small mock API server for testing HTTP clients. It returns realistic JSON
-for common resources, simulates real authentication flows (API keys, JWT, OAuth2 and Basic),
-and lets every request control its own size, randomness, latency and failure mode. Use it
-while the real backend doesn't exist yet, or when you need to test edge cases the real
-backend can't easily produce.
+**A mock API server for testing HTTP clients. Install once, switch on only the features you need.**
 
-- **Realistic mock data**: users, products, orders, credit lines, activity logs, phone numbers and an RSS feed (JSON or XML).
-- **Controls on every request**: `?count=`, `?seed=` for reproducible output, `?delay=` for latency, and `?status=` to force errors.
-- **Payments**: mobile money and card flows with test numbers, webhooks, refunds and 3-D Secure.
-- **Auth flows to test against**: issue tokens, then call endpoints that accept any scheme or exactly one.
-- **Built-in interactive docs** at `/docs` (Swagger UI) and an OpenAPI spec at `/openapi.json`.
-- **CORS enabled**, so a browser app on another port can call it directly.
+Mock-Box gives your frontend, mobile app or integration tests a realistic backend before the real
+one exists, and lets you reproduce the edge cases a real backend can't easily produce: slow
+responses, failed payments, expired tokens, flaky endpoints. Run it with Docker or `pip`;
+no code or accounts needed.
+
+📖 **Documentation:** https://tgkcapture.github.io/mock-box/
+
+## Features
+
+<!-- --8<-- [start:features] -->
+Every feature can be turned on or off on its own (see [Pick only what you need](#pick-only-what-you-need)).
+
+| Feature | What you get | Endpoints | Switch |
+|---------|--------------|-----------|--------|
+| **Mock data** | Realistic users, products, orders, posts, comments, todos, credit lines, activity logs, phone numbers and an RSS feed, with [pagination, sorting, filtering and search](#pagination-sorting-and-filtering) and [per-request controls](#request-controls): `?count`, `?seed`, `?delay`, `?status`. | `/api/users`, `/api/products`, ... | `data` |
+| **Stateful CRUD** | A schemaless in-memory database that remembers creates, updates and deletes. | `/api/store/{collection}` | `store` |
+| **Payments** | Mobile money (Airtel Money, TNM Mpamba, M-Pesa, MTN MoMo style) and card flows with test numbers, signed webhooks, refunds, idempotency and 3-D Secure. | `/api/payments` | `payments` |
+| **Auth flows** | Issue API keys, JWTs and OAuth2 tokens, then test endpoints that accept any scheme or exactly one. | `/api/auth/*` | `auth` |
+| **Admin API** | Manage issued keys and tokens with an admin key. | `/api/admin/*` | `admin` |
+| **Echo** | Returns exactly the request it received. | `/api/echo` | `echo` |
+| **Request inspector** | A live page showing every request your app sent, with credentials masked. | `/inspect` | `inspector` |
+| **Interactive docs** | Endpoint list and Swagger UI to try requests in the browser. | `/`, `/docs` | `docs` |
+| **Custom routes** | Your own endpoints from a JSON or YAML file: templated responses, conditions, sequences, files, hot reload. | anything you define | `--mocks` |
+
+Always on: `/health`, the OpenAPI spec at `/openapi.json` (import it into Postman, Insomnia or a
+client generator), and CORS so a browser app on another port can call Mock-Box directly.
 
 > **Mock-Box is a testing tool, not a production server.** It hands out tokens to anyone
 > and accepts any Basic credentials. Keep it on `127.0.0.1` or a trusted network.
+<!-- --8<-- [end:features] -->
 
 ## Quick start
 
+<!-- --8<-- [start:quick-start] -->
 **Docker** (no Python needed):
 
 ```bash
@@ -61,7 +83,7 @@ docker run --rm -p 5000:5000 \
 docker run --rm -p 5000:5000 -v "$PWD/config.ini:/app/config.ini:ro" ghcr.io/tgkcapture/mock-box
 ```
 
-To run it alongside your app, see [`docker-compose.yml`](docker-compose.yml). Images are
+To run it alongside your app, see [`docker-compose.yml`](https://github.com/TgkCapture/mock-box/blob/main/docker-compose.yml). Images are
 published for `linux/amd64` and `linux/arm64`. Each release is tagged with its version
 (`0.2.0`, `0.2`) and `latest`.
 
@@ -72,11 +94,33 @@ curl "http://127.0.0.1:5000/api/users?count=2&seed=demo"
 ### Command line
 
 ```text
-mockbox [--config PATH] [--host HOST] [--port PORT] [--mocks FILE ...] [--debug | --no-debug] [--version]
+mockbox [--config PATH] [--host HOST] [--port PORT] [--mocks FILE ...] [--features LIST]
+        [--openapi] [--debug | --no-debug] [--version]
 ```
+
+`mockbox --openapi > openapi.json` prints the OpenAPI spec and exits, so you can import it
+into Postman or Insomnia, or generate a typed client from it.
+
+### Pick only what you need
+
+By default every feature is on. Choose a subset with `--features`, `MOCKBOX_FEATURES` or
+`[server] features`. Disabled features disappear completely: their routes return `404` and they
+are left out of `/docs` and `/openapi.json`.
+
+```bash
+mockbox --features payments              # just the payments API
+mockbox --features data,store,docs       # mock data, the CRUD store and the docs UI
+mockbox --features -admin,-inspector     # everything except the admin API and the inspector
+docker run --rm -p 5000:5000 -e MOCKBOX_FEATURES=payments,docs ghcr.io/tgkcapture/mock-box
+```
+
+Feature names: `data`, `store`, `payments`, `auth`, `admin`, `echo`, `inspector`, `docs`.
+`GET /health` shows which are enabled. Custom routes work with any selection, including none: `--features -data,-store,-payments,-auth,-admin,-echo,-inspector,-docs` leaves only your own routes.
+<!-- --8<-- [end:quick-start] -->
 
 ## Configuration
 
+<!-- --8<-- [start:configuration] -->
 Every setting is optional. They are read in this order, later sources winning:
 built-in defaults, then `config.ini` (in the current directory, or the path given by `--config` or
 `MOCKBOX_CONFIG`), then environment variables, then command-line flags.
@@ -92,13 +136,16 @@ cp config.ini.example config.ini
 | `[server] debug`              | `MOCKBOX_DEBUG`          | `false`     | Flask debug mode. Never enable it on a non-loopback host. |
 | `[server] secret_key`         | `MOCKBOX_SECRET_KEY`     | random      | Signs JWTs. If empty, a random key is used and tokens stop working after a restart. |
 | `[server] cors_origins`       | `MOCKBOX_CORS_ORIGINS`   | `*`         | Comma-separated allowed origins. Empty disables CORS. |
+| `[server] features`           | `MOCKBOX_FEATURES`       | `all`       | Features to enable, e.g. `data,store` or `-payments`. See [Pick only what you need](#pick-only-what-you-need). |
 | `[auth] admin_api_keys`       | `MOCKBOX_ADMIN_API_KEYS` | *(none)*    | Comma-separated admin keys. If empty, the admin API is disabled. |
 | `[mocks] files`               | `MOCKBOX_MOCKS`          | *(none)*    | Comma-separated [custom route](#custom-routes) files. |
 
 Generate a secret key with `python -c "import secrets; print(secrets.token_hex(32))"`.
+<!-- --8<-- [end:configuration] -->
 
 ## Mock data endpoints
 
+<!-- --8<-- [start:mock-data] -->
 All of these are `GET` requests and accept the [request controls](#request-controls).
 
 | Endpoint                     | Default count | Returns |
@@ -164,9 +211,11 @@ When paginating:
 ```bash
 curl -i "http://127.0.0.1:5000/api/orders?page=2&per_page=5&sort=-total_price&filter[status]=paid"
 ```
+<!-- --8<-- [end:mock-data] -->
 
 ## Custom routes
 
+<!-- --8<-- [start:custom-routes] -->
 Describe your own endpoints in a JSON or YAML file and Mock-Box serves them. They can live at
 any path, such as `/v1/payments/{id}`, and can even override a built-in endpoint.
 
@@ -206,7 +255,7 @@ routes:
       - { body: { ok: true } }
 ```
 
-[`examples/mocks.yaml`](examples/mocks.yaml) is a commented tour of every option. In summary:
+[`examples/mocks.yaml`](https://github.com/TgkCapture/mock-box/blob/main/examples/mocks.yaml) is a commented tour of every option. In summary:
 
 | Key | Meaning |
 |-----|---------|
@@ -239,9 +288,11 @@ How placeholders behave:
 - **Startup errors:** mistakes are reported with their exact location, for example `mocks.yaml: routes[3].status: ...`. Unknown keys are rejected, so typos don't fail silently.
 - **YAML support** needs `pip install "mock-box[yaml]"`. The Docker image includes it. In Docker, mount your file and point `MOCKBOX_MOCKS` at it:
   `docker run -p 5000:5000 -v "$PWD/mocks.yaml:/app/mocks.yaml:ro" -e MOCKBOX_MOCKS=/app/mocks.yaml ghcr.io/tgkcapture/mock-box`
+<!-- --8<-- [end:custom-routes] -->
 
 ## Stateful CRUD (`/api/store`)
 
+<!-- --8<-- [start:store] -->
 `/api/users` and the other mock endpoints return fresh random data on every call. To test
 create, update and delete flows, use the store instead. It's a schemaless in-memory database
 that remembers your changes.
@@ -269,9 +320,11 @@ that remembers your changes.
 curl -X POST http://127.0.0.1:5000/api/store/todos -H "Content-Type: application/json" -d '{"title": "Ship v1", "completed": false}'
 curl -X PATCH http://127.0.0.1:5000/api/store/todos/41 -H "Content-Type: application/json" -d '{"completed": true}'
 ```
+<!-- --8<-- [end:store] -->
 
 ## Payments (`/api/payments`)
 
+<!-- --8<-- [start:payments] -->
 Test checkout flows without a sandbox account. Mock-Box simulates mobile money (the
 "enter your PIN on your phone" flow used by Airtel Money, TNM Mpamba, M-Pesa and MTN MoMo)
 and card payments, including webhooks, refunds and 3-D Secure.
@@ -328,9 +381,11 @@ so you can test your signature check. Each delivery attempt (status code or erro
 curl -X POST http://127.0.0.1:5000/api/payments/mobile-money -H "Content-Type: application/json"   -d '{"provider": "airtel", "phone": "+265991234567", "amount": 5000, "callback_url": "http://127.0.0.1:8000/webhooks"}'
 # {"id": "pay_...", "status": "pending", ...}  -> a few seconds later: "succeeded", and your webhook is called
 ```
+<!-- --8<-- [end:payments] -->
 
 ## Debugging requests
 
+<!-- --8<-- [start:debugging] -->
 **Echo.** `/api/echo` (and any sub-path, such as `/api/echo/v1/orders`) accepts `GET`, `POST`,
 `PUT`, `PATCH` and `DELETE` and returns exactly what it received: method, path, query, headers,
 and the body parsed as JSON, form fields, uploaded files (name, type and size) or raw text.
@@ -351,9 +406,11 @@ with headers, body, status and timing. The same data is available as JSON:
 The history is kept in memory and holds the last 200 requests. Credentials (`Authorization`,
 `X-API-Key`, `Cookie`) are masked in the inspector, but not in echo responses, which only go
 back to the caller. Request bodies are limited to 10 MB; anything larger gets `413`.
+<!-- --8<-- [end:debugging] -->
 
 ## Authentication
 
+<!-- --8<-- [start:auth] -->
 Get a credential from one of the public issuing endpoints, then send it with your request:
 
 | Credential   | How to get it                    | How to send it |
@@ -381,9 +438,11 @@ curl -X POST http://127.0.0.1:5000/api/auth/oauth-token -d grant_type=refresh_to
 
 Issued API keys and OAuth tokens are kept in memory, so a restart clears them. JWTs survive a
 restart only if `secret_key` is configured.
+<!-- --8<-- [end:auth] -->
 
 ## Admin API
 
+<!-- --8<-- [start:admin] -->
 Admin endpoints are available only when at least one admin key is configured. They accept
 **only** an admin key (`X-API-Key`, `ApiKey` or `Bearer`). Regular tokens, JWTs and Basic
 credentials get `403`.
@@ -398,41 +457,53 @@ credentials get `403`.
 
 Keys created at runtime last only until the server stops. Mock-Box never writes to your config
 file, so to make a key permanent, add it to `admin_api_keys`.
+<!-- --8<-- [end:admin] -->
 
 ## Web UI
 
+<!-- --8<-- [start:web-ui] -->
 | Path            | What it is |
 |-----------------|------------|
 | `/`             | Landing page that lists every endpoint (generated from the OpenAPI spec). |
 | `/docs`         | Swagger UI: try requests and authorize with any scheme. Loaded from the jsDelivr CDN, so it needs internet access. |
 | `/openapi.json` | OpenAPI 3 spec. Import it into Postman, Insomnia or a client generator. |
 | `/health`       | Health check. |
+<!-- --8<-- [end:web-ui] -->
 
 ## Development
 
+<!-- --8<-- [start:development] -->
 ```bash
 pip install -e ".[dev]"
 pytest
 ```
 
 The test suite fails if a route isn't described in `mockbox/openapi.py`, which keeps the docs
-accurate. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add an endpoint.
+accurate. See [CONTRIBUTING.md](https://github.com/TgkCapture/mock-box/blob/main/CONTRIBUTING.md) for how to add an endpoint.
 
 ```text
 mockbox/
   __main__.py      CLI entry point
   app.py           create_app(): wiring, CORS
   config.py        settings from defaults, config.ini, env vars and flags
+  features.py      the optional feature groups behind --features
   auth.py          token issuing, credential parsing, @require_auth / @require_admin
   controls.py      ?count / ?seed / ?delay / ?status
+  listing.py       pagination, sorting, filtering and search
   generators.py    pure mock-data generators
+  store.py         in-memory CRUD store
+  payments.py      payment simulator and webhooks
+  inspector.py     request recording
+  custom_routes.py custom routes loader and matcher
+  templating.py    {{placeholder}} rendering for custom routes
   openapi.py       OpenAPI spec (drives /docs and the home page)
   errors.py        JSON error format
   routes/          one blueprint per resource
-  templates/       home and docs pages
+  templates/       home, docs and inspector pages
 tests/
 ```
+<!-- --8<-- [end:development] -->
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/TgkCapture/mock-box/blob/main/LICENSE)

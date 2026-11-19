@@ -2,7 +2,14 @@
 
 ## Unreleased
 
+## 0.2.0
+
 ### Added
+- Feature switches: `--features`, `MOCKBOX_FEATURES` or `[server] features` enable only the parts you
+  need (`data`, `store`, `payments`, `auth`, `admin`, `echo`, `inspector`, `docs`). Disabled features
+  are removed from routing, `/docs` and `/openapi.json`; `/health` lists what is enabled.
+- `mockbox --openapi` prints the OpenAPI spec (for Postman, Insomnia or client generators).
+- Documentation site at https://tgkcapture.github.io/mock-box/.
 - Docker image (`ghcr.io/tgkcapture/mock-box`, amd64/arm64) and a `docker-compose.yml` example.
 - `server` extra: when waitress is installed, the `mockbox` CLI serves with it instead of Flask's dev server.
 - Release workflow: pushing a `v*` tag publishes to PyPI and GHCR and creates a GitHub Release.

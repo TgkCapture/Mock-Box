@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a new mock resource, flow or option.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to test?
+      description: Describe the client behavior or edge case you can't test today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: An endpoint, a request/response example, or an option.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Can custom routes do it?
+      description: Many cases can be covered with a mocks file (see the docs). If that didn't work, what was missing?
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to implement this myself

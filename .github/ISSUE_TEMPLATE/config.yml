@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://tgkcapture.github.io/mock-box/
+    about: Guides for every feature, with examples.
+  - name: Report a security vulnerability
+    url: https://github.com/TgkCapture/mock-box/security/advisories/new
+    about: Please report security issues privately.

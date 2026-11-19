@@ -1,0 +1,79 @@
+site_name: Mock-Box
+site_description: >-
+  Mock API server for testing HTTP clients: realistic data, CRUD, payments, auth flows,
+  custom routes and error simulation. Enable only the features you need.
+site_url: https://tgkcapture.github.io/mock-box/
+repo_url: https://github.com/TgkCapture/mock-box
+repo_name: TgkCapture/mock-box
+edit_uri: edit/main/docs/
+copyright: Mock-Box is released under the MIT License.
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.snippets:
+      # Pages pull their content from README.md sections so the two never drift apart.
+      base_path: ["."]
+      check_paths: true
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Configuration: configuration.md
+  - Features:
+      - Mock data: features/mock-data.md
+      - Custom routes: features/custom-routes.md
+      - Stateful CRUD: features/store.md
+      - Payments: features/payments.md
+      - Authentication: features/auth.md
+      - Debugging requests: features/debugging.md
+      - Web UI: features/web-ui.md
+  - API reference: api-reference.md
+  - Project:
+      - Contributing: contributing.md
+      - Changelog: changelog.md
+      - Releasing: RELEASING.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/TgkCapture/mock-box
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/mock-box/
+    - icon: fontawesome/brands/docker
+      link: https://github.com/TgkCapture/mock-box/pkgs/container/mock-box
+
+exclude_docs: |
+  requirements.txt

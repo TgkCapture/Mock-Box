@@ -22,3 +22,7 @@ venv/
 .history/
 .vscode/
 .idea/
+
+# Documentation build output
+site/
+docs/openapi.json

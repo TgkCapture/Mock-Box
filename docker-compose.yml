@@ -12,6 +12,8 @@ services:
       MOCKBOX_SECRET_KEY: change-me-to-a-long-random-string
       # Enables /api/admin/* with this key
       MOCKBOX_ADMIN_API_KEYS: local-admin-key-change-me
+      # Enable only what you need, e.g. "payments,docs" or "-admin" (default: all)
+      # MOCKBOX_FEATURES: all
     # Or mount a config file instead of using environment variables:
     # volumes:
     #   - ./config.ini:/app/config.ini:ro

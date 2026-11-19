@@ -5,18 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mock-box"
 dynamic = ["version"]
-description = "A configurable mock API server for testing HTTP clients: realistic data, auth flows and error simulation."
+description = "Mock API server for testing HTTP clients: realistic data, CRUD, payments, auth flows, custom routes and error simulation. Enable only the features you need."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "TgkCapture" }]
-keywords = ["mock", "mock-server", "api", "testing", "flask", "jwt", "oauth"]
+keywords = [
+    "mock", "mock-server", "mock-api", "fake-api", "api", "rest", "testing", "openapi", "swagger",
+    "flask", "jwt", "oauth", "webhooks", "payments", "mobile-money", "json-server", "docker",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
     "Framework :: Flask",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Testing :: Mocking",
 ]
 dependencies = [
@@ -35,7 +48,10 @@ mockbox = "mockbox.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/TgkCapture/mock-box"
+Documentation = "https://tgkcapture.github.io/mock-box/"
+Changelog = "https://github.com/TgkCapture/mock-box/blob/main/CHANGELOG.md"
 Issues = "https://github.com/TgkCapture/mock-box/issues"
+Source = "https://github.com/TgkCapture/mock-box"
 
 [tool.setuptools]
 packages = ["mockbox", "mockbox.routes"]

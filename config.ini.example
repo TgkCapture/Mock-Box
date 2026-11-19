@@ -13,6 +13,10 @@ debug = false
 secret_key =
 # Comma-separated allowed CORS origins, "*" for any, empty to disable. [MOCKBOX_CORS_ORIGINS]
 cors_origins = *
+# Features to enable: all (default), a list such as "data, store", or exclusions such as
+# "-payments, -admin". Choose from: data, store, payments, auth, admin, echo, inspector, docs.
+# [MOCKBOX_FEATURES]
+features = all
 
 [auth]
 # Comma-separated admin API keys for /api/admin/*. Empty disables the admin API.
