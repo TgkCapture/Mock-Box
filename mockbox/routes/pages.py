@@ -1,11 +1,13 @@
 """Human-facing pages and service endpoints."""
 
+import copy
 from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, render_template
 
 from .. import __version__
-from ..openapi import build_spec
+from ..custom_routes import get_custom_routes
+from ..openapi import build_spec, custom_route_paths
 
 bp = Blueprint("pages", __name__)
 
@@ -13,9 +15,18 @@ SWAGGER_UI_VERSION = "5.17.14"
 
 
 def _spec():
+    """Built-in spec (cached) plus the currently loaded custom routes."""
     if "mockbox.openapi" not in current_app.extensions:
         current_app.extensions["mockbox.openapi"] = build_spec(__version__)
-    return current_app.extensions["mockbox.openapi"]
+    base = current_app.extensions["mockbox.openapi"]
+    custom = get_custom_routes()
+    custom.maybe_reload()
+    if not custom.routes:
+        return base
+    spec = copy.deepcopy(base)
+    for path, ops in custom_route_paths(custom.routes).items():
+        spec["paths"].setdefault(path, {}).update(ops)  # custom routes override built-ins
+    return spec
 
 
 @bp.get("/")
