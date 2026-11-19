@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .controls import MAX_COUNT, MAX_DELAY_MS
+from .listing import DEFAULT_PER_PAGE, MAX_PER_PAGE
 
 ANY_AUTH = [{"BearerAuth": []}, {"ApiKeyAuth": []}, {"BasicAuth": []}]
 ADMIN_AUTH = [{"ApiKeyAuth": []}]
@@ -23,6 +24,16 @@ _ADMIN_ERRORS = {
     "401": {"$ref": "#/components/responses/Error"},
     "403": {"$ref": "#/components/responses/Error"},
 }
+_LISTING = [
+    {"$ref": "#/components/parameters/page"},
+    {"$ref": "#/components/parameters/per_page"},
+    {"$ref": "#/components/parameters/limit"},
+    {"$ref": "#/components/parameters/cursor"},
+    {"$ref": "#/components/parameters/sort"},
+    {"$ref": "#/components/parameters/filter"},
+    {"$ref": "#/components/parameters/q"},
+    {"$ref": "#/components/parameters/envelope"},
+]
 _CONTROLS = [
     {"$ref": "#/components/parameters/count"},
     {"$ref": "#/components/parameters/seed"},
@@ -37,6 +48,7 @@ def _op(
     *,
     description: str = "",
     controls: bool = False,
+    listing: bool = False,
     security: Optional[List[Dict[str, list]]] = None,
     params: Optional[List[Dict[str, Any]]] = None,
     body: Optional[Dict[str, Any]] = None,
@@ -46,7 +58,7 @@ def _op(
     op: Dict[str, Any] = {"tags": [tag], "summary": summary, "responses": {ok: _JSON_OK, **_ERRORS}}
     if description:
         op["description"] = description
-    parameters = list(params or []) + (_CONTROLS if controls else [])
+    parameters = list(params or []) + (_CONTROLS if controls else []) + (_LISTING if listing else [])
     if parameters:
         op["parameters"] = parameters
     if body:
@@ -167,11 +179,11 @@ def build_spec(version: str) -> Dict[str, Any]:
                 ],
             )
         },
-        "/api/products": {"get": _op("Mock data", "Products", controls=True)},
-        "/api/users": {"get": _op("Mock data", "Users", controls=True)},
-        "/api/orders": {"get": _op("Mock data", "Orders", controls=True)},
-        "/api/credit-lines": {"get": _op("Mock data", "Credit lines", controls=True)},
-        "/api/user-activities": {"get": _op("Mock data", "User activities", controls=True)},
+        "/api/products": {"get": _op("Mock data", "Products", controls=True, listing=True)},
+        "/api/users": {"get": _op("Mock data", "Users", controls=True, listing=True)},
+        "/api/orders": {"get": _op("Mock data", "Orders", controls=True, listing=True)},
+        "/api/credit-lines": {"get": _op("Mock data", "Credit lines", controls=True, listing=True)},
+        "/api/user-activities": {"get": _op("Mock data", "User activities", controls=True, listing=True)},
         "/api/rss-feed": {
             "get": _op(
                 "Mock data",
@@ -218,6 +230,22 @@ def build_spec(version: str) -> Dict[str, Any]:
                 "BasicAuth": {"type": "http", "scheme": "basic", "description": "Any username/password is accepted"},
             },
             "parameters": {
+                "page": _query("page", "Page number (enables page pagination)", {"type": "integer", "minimum": 1}),
+                "per_page": _query("per_page", f"Items per page (1-{MAX_PER_PAGE}, default {DEFAULT_PER_PAGE})", {"type": "integer", "minimum": 1, "maximum": MAX_PER_PAGE}),
+                "limit": _query("limit", "Items per page (enables cursor pagination)", {"type": "integer", "minimum": 1, "maximum": MAX_PER_PAGE}),
+                "cursor": _query("cursor", "Cursor from a previous response's X-Next-Cursor / meta.next_cursor", {"type": "string"}),
+                "sort": _query("sort", "Comma-separated fields; prefix with - for descending, e.g. -price,name", {"type": "string"}),
+                "filter": {
+                    "name": "filter",
+                    "in": "query",
+                    "required": False,
+                    "style": "deepObject",
+                    "explode": True,
+                    "description": "filter[field]=a,b (any of) or filter[field][op]=value with op in eq, ne, gt, gte, lt, lte, contains",
+                    "schema": {"type": "object", "additionalProperties": {"type": "string"}},
+                },
+                "q": _query("q", "Case-insensitive search across text fields", {"type": "string"}),
+                "envelope": _query("envelope", "Wrap the result as {data, meta, links}", {"type": "boolean"}),
                 "count": _query("count", f"Number of items (1-{MAX_COUNT})", {"type": "integer", "minimum": 1, "maximum": MAX_COUNT}),
                 "seed": _query("seed", "Reproducible output for the same seed", {"type": "string", "maxLength": 64}),
                 "delay": _query("delay", f"Delay in ms (0-{MAX_DELAY_MS})", {"type": "integer", "minimum": 0, "maximum": MAX_DELAY_MS}),

@@ -7,6 +7,10 @@
 - `server` extra: when waitress is installed, the `mockbox` CLI serves with it instead of Flask's dev server.
 - Release workflow: pushing a `v*` tag publishes to PyPI and GHCR and creates a GitHub Release.
 - CI builds and smoke-tests the Docker image.
+- Pagination (page-based with `Link`/`X-Total-Count` headers, or cursor-based), sorting, filtering
+  (`filter[field]`, `filter[field][op]`), search (`q`) and an optional `{data, meta, links}` envelope
+  on list endpoints. Paginated collections are stable across requests.
+- CORS now exposes pagination and auth headers to browser code.
 
 ## 0.1.0: first public release
 

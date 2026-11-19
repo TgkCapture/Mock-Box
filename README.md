@@ -135,6 +135,31 @@ Invalid values return `400`. Errors always use the same JSON shape:
 
 Controls are applied before authentication, so `?status=` works on protected endpoints too.
 
+### Pagination, sorting and filtering
+
+`/api/users`, `/api/products`, `/api/orders`, `/api/credit-lines` and `/api/user-activities`
+also support the parameters below. If you don't pass any of them, the response is a plain array, as before.
+
+| Parameter | Example | Effect |
+|-----------|---------|--------|
+| `page`, `per_page` | `?page=2&per_page=10` | Page-based pagination (`per_page` 1–100, default 10). |
+| `limit`, `cursor`  | `?limit=10&cursor=bzoxMA` | Cursor-based pagination. Take the next cursor from `X-Next-Cursor` or `meta.next_cursor`. |
+| `sort`    | `?sort=-price,name` | Sort by one or more fields. Prefix a field with `-` for descending. |
+| `filter[field]` | `?filter[status]=active,overdue` | Exact match. Commas mean "any of". |
+| `filter[field][op]` | `?filter[price][gte]=100` | Operators: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `contains`. |
+| `q`       | `?q=banda` | Case-insensitive search across text fields. |
+| `envelope`| `?envelope=true` | Return `{"data": [...], "meta": {...}, "links": {...}}` instead of a bare array. |
+
+When paginating:
+- **Collection size:** `count` sets the total number of items (default 100).
+- **Stable pages:** the collection doesn't change between requests, so pages never overlap. Add `seed` to choose which data you get.
+- **Response headers:** `X-Total-Count`, `X-Page`, `X-Per-Page`, `X-Total-Pages` and a GitHub-style `Link` header (`first`, `prev`, `next`, `last`). Cursor mode sends `X-Next-Cursor` instead.
+- **Browser access:** CORS exposes these headers, so browser code can read them.
+
+```bash
+curl -i "http://127.0.0.1:5000/api/orders?page=2&per_page=5&sort=-total_price&filter[status]=paid"
+```
+
 ## Authentication
 
 Get a credential from one of the public issuing endpoints, then send it with your request:

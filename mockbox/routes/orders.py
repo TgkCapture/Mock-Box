@@ -1,11 +1,12 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint
 
 from .. import generators
-from ..controls import count_arg, now, rng
+from ..controls import now, rng
+from ..listing import list_response
 
 bp = Blueprint("orders", __name__)
 
 
 @bp.get("/orders")
 def list_orders():
-    return jsonify(generators.orders(rng(), now(), count_arg(3)))
+    return list_response(lambda n: generators.orders(rng(), now(), n), 3)

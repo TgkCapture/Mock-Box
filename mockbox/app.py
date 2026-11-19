@@ -12,6 +12,11 @@ from .errors import register_error_handlers
 
 CORS_ALLOW_HEADERS = "Authorization, Content-Type, X-API-Key"
 CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+# Headers browser code may read from responses (pagination, rate limits, etc.).
+CORS_EXPOSE_HEADERS = (
+    "Link, X-Total-Count, X-Page, X-Per-Page, X-Total-Pages, X-Next-Cursor, "
+    "Retry-After, WWW-Authenticate"
+)
 
 
 def create_app(settings: Optional[Settings] = None, config_path: Optional[str] = None) -> Flask:
@@ -55,5 +60,6 @@ def _register_cors(app: Flask, origins) -> None:
             return response
         response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
         response.headers["Access-Control-Allow-Methods"] = CORS_ALLOW_METHODS
+        response.headers["Access-Control-Expose-Headers"] = CORS_EXPOSE_HEADERS
         response.headers["Access-Control-Max-Age"] = "600"
         return response
