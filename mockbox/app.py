@@ -7,7 +7,8 @@ from typing import Optional
 from flask import Flask, request
 
 from .auth import EXTENSION_KEY, AuthManager
-from .config import Settings, load_settings
+from .config import ConfigError, Settings, load_settings
+from .custom_routes import CustomRoutes, MockFileError
 from .errors import register_error_handlers
 from .inspector import Inspector
 from .store import EXTENSION_KEY as STORE_KEY, Store
@@ -38,7 +39,12 @@ def create_app(settings: Optional[Settings] = None, config_path: Optional[str] =
     app.extensions[EXTENSION_KEY] = AuthManager(settings.secret_key, settings.admin_api_keys)
 
     app.extensions[STORE_KEY] = Store()
+    try:
+        custom_routes = CustomRoutes(settings.mocks_files)
+    except MockFileError as exc:
+        raise ConfigError(f"Invalid mocks file: {exc}") from exc
     Inspector().init_app(app)
+    custom_routes.init_app(app)
     register_error_handlers(app)
     _register_cors(app, settings.cors_origins)
 

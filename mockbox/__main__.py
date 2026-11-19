@@ -20,6 +20,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-c", "--config", help="Path to a config.ini file (default: ./config.ini if present)")
     parser.add_argument("--host", help="Interface to bind (default: 127.0.0.1)")
     parser.add_argument("-p", "--port", type=int, help="Port to listen on (default: 5000)")
+    parser.add_argument(
+        "-m", "--mocks", action="append", metavar="FILE",
+        help="Custom routes file (JSON or YAML); repeat for several files",
+    )
     parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=None, help="Enable Flask debug mode")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
@@ -30,7 +34,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     try:
-        settings = load_settings(args.config).with_overrides(host=args.host, port=args.port, debug=args.debug)
+        settings = load_settings(args.config).with_overrides(
+            host=args.host, port=args.port, debug=args.debug, mocks_files=tuple(args.mocks) if args.mocks else None
+        )
         if not 1 <= settings.port <= 65535:
             raise ConfigError(f"--port must be between 1 and 65535, got {settings.port}")
     except ConfigError as exc:
@@ -48,7 +54,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     if settings.debug and exposed:
         log.warning("Debug mode on a non-loopback host allows remote code execution.")
 
-    serve(create_app(settings), settings.host, settings.port, settings.debug)
+    try:
+        app = create_app(settings)
+    except ConfigError as exc:
+        print(f"mockbox: configuration error: {exc}", file=sys.stderr)
+        return 2
+    serve(app, settings.host, settings.port, settings.debug)
     return 0
 
 
