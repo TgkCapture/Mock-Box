@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock-Box API Docs</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{{ swagger_version }}/swagger-ui.css">
+  <style>
+    body { margin: 0; background: #fff; }
+    .fallback { font: 15px system-ui, sans-serif; max-width: 640px; margin: 48px auto; padding: 0 16px; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui">
+    <div class="fallback">
+      <p>Loading interactive docs&hellip;</p>
+      <p>The docs UI is loaded from cdn.jsdelivr.net. If you are offline, the raw spec is at
+        <a href="/openapi.json">/openapi.json</a> and the endpoint list is on the <a href="/">home page</a>.</p>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@{{ swagger_version }}/swagger-ui-bundle.js" crossorigin="anonymous"></script>
+  <script>
+    if (window.SwaggerUIBundle) {
+      window.ui = SwaggerUIBundle({
+        url: "/openapi.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        persistAuthorization: true,
+        tryItOutEnabled: true,
+        displayRequestDuration: true
+      });
+    }
+  </script>
+</body>
+</html>

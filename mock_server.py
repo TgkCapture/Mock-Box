@@ -1,7 +1,8 @@
-# mock_server.py
-from app import create_app
+"""Backwards-compatible entry point. Prefer ``mockbox`` or ``python -m mockbox``."""
 
-app = create_app()
+import sys
 
-if __name__ == '__main__':
-    app.run(port=app.config['PORT'], debug=app.config['DEBUG'])
+from mockbox.__main__ import main
+
+if __name__ == "__main__":
+    sys.exit(main())
