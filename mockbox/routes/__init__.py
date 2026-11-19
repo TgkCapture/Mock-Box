@@ -26,6 +26,7 @@ from . import (
     data,
     echo,
     inspector,
+    mocks,
     orders,
     pages,
     phone_numbers,
@@ -62,6 +63,7 @@ def register_routes(app: Flask) -> None:
     api.register_blueprint(auth.bp)
     api.register_blueprint(admin.bp)
     api.register_blueprint(inspector.bp)
+    api.register_blueprint(mocks.bp)
     api.register_blueprint(mock)
 
     app.register_blueprint(pages.bp)
