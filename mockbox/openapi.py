@@ -5,9 +5,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from .controls import MAX_COUNT, MAX_DELAY_MS
+from .features import ALL as ALL_FEATURES, feature_for_path
 from .listing import DEFAULT_PER_PAGE, MAX_PER_PAGE
 
 ANY_AUTH = [{"BearerAuth": []}, {"ApiKeyAuth": []}, {"BasicAuth": []}]
@@ -152,7 +153,9 @@ def custom_route_paths(routes) -> Dict[str, Dict[str, Any]]:
     return paths
 
 
-def build_spec(version: str) -> Dict[str, Any]:
+def build_spec(version: str, features: Iterable[str] = ALL_FEATURES) -> Dict[str, Any]:
+    """The spec for the built-in routes of the enabled ``features``."""
+    enabled = set(features)
     paths = {
         # ---------------------------------------------------------------- auth
         "/api/auth/api-key": {"post": _op("Auth", "Issue an API key", ok="201")},
@@ -387,6 +390,7 @@ def build_spec(version: str) -> Dict[str, Any]:
         # ---------------------------------------------------------------- service
         "/health": {"get": _op("Service", "Health check")},
     }
+    paths = {path: ops for path, ops in paths.items() if feature_for_path(path) in enabled | {None}}
 
     return {
         "openapi": "3.0.3",
@@ -461,3 +465,10 @@ def build_spec(version: str) -> Dict[str, Any]:
             },
         },
     }
+
+
+def prune_tags(spec: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop tag definitions no operation uses (e.g. for disabled features)."""
+    used = {tag for ops in spec["paths"].values() for op in ops.values() for tag in op.get("tags", [])}
+    spec["tags"] = [t for t in spec["tags"] if t["name"] in used]
+    return spec
