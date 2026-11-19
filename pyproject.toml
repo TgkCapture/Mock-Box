@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mock-box"
+dynamic = ["version"]
+description = "A configurable mock API server for testing HTTP clients: realistic data, auth flows and error simulation."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "TgkCapture" }]
+keywords = ["mock", "mock-server", "api", "testing", "flask", "jwt", "oauth"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Flask",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing :: Mocking",
+]
+dependencies = [
+    "Flask>=3.0,<4",
+    "Werkzeug>=3.0.6",
+    "PyJWT>=2.8,<3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+mockbox = "mockbox.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/TgkCapture/mock-box"
+Issues = "https://github.com/TgkCapture/mock-box/issues"
+
+[tool.setuptools]
+packages = ["mockbox", "mockbox.routes"]
+
+[tool.setuptools.dynamic]
+version = { attr = "mockbox.__version__" }
+
+[tool.setuptools.package-data]
+mockbox = ["templates/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

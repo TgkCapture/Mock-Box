@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock-Box</title>
+  <style>
+    :root {
+      --bg: #f7f7f8; --surface: #ffffff; --text: #1d1d21; --muted: #62626b;
+      --border: #e3e3e8; --accent: #4f46e5; --get: #0f7b4f; --post: #b45309; --delete: #b91c1c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121214; --surface: #1b1b1f; --text: #ececf0; --muted: #a0a0aa;
+        --border: #2c2c33; --accent: #8b85ff; --get: #4ade80; --post: #fbbf24; --delete: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 880px; margin: 0 auto; padding: 48px 16px; }
+    h1 { margin: 0 0 4px; font-size: 28px; }
+    .sub { color: var(--muted); margin: 0 0 24px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+    .btn { display: inline-block; padding: 8px 14px; border-radius: 8px; text-decoration: none;
+           border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 8px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    td { padding: 9px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+    tr:first-child td { border-top: 0; }
+    .m { font: 600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; width: 64px; }
+    .m.GET { color: var(--get); } .m.POST { color: var(--post); } .m.DELETE { color: var(--delete); }
+    code { font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+    .lock { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .note { margin-top: 28px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px;
+            background: var(--surface); color: var(--muted); }
+    @media (max-width: 560px) { .summary { display: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Mock-Box</h1>
+  <p class="sub">Mock API server &middot; v{{ version }} &middot; running</p>
+  <div class="actions">
+    <a class="btn primary" href="/docs">Interactive API docs</a>
+    <a class="btn" href="/openapi.json">OpenAPI spec</a>
+    <a class="btn" href="/health">Health check</a>
+  </div>
+
+  {% for tag, items in endpoints|groupby("tag") %}
+  <h2>{{ tag }}</h2>
+  <table>
+    {% for e in items %}
+    <tr>
+      <td class="m {{ e.method }}">{{ e.method }}</td>
+      <td><code>{{ e.path }}</code></td>
+      <td class="summary">{{ e.summary }}</td>
+      <td class="lock">{% if e.secured %}auth{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+
+  <p class="note">
+    Mock data endpoints accept <code>?count=</code>, <code>?seed=</code>, <code>?delay=</code> (ms) and
+    <code>?status=</code> (force an error). Mock-Box is a testing tool: do not expose it to the internet.
+  </p>
+</main>
+</body>
+</html>
