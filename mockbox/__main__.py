@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -11,6 +12,7 @@ from typing import List, Optional
 from . import __version__
 from .app import create_app
 from .config import ConfigError, load_settings
+from .features import ALL as ALL_FEATURES, FeatureError, parse_features
 
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
@@ -24,6 +26,14 @@ def build_parser() -> argparse.ArgumentParser:
         "-m", "--mocks", action="append", metavar="FILE",
         help="Custom routes file (JSON or YAML); repeat for several files",
     )
+    parser.add_argument(
+        "-f", "--features", metavar="LIST",
+        help=f"Features to enable, e.g. 'data,store' or '-payments' (default: all). Choose from: {', '.join(ALL_FEATURES)}",
+    )
+    parser.add_argument(
+        "--openapi", action="store_true",
+        help="Print the OpenAPI spec as JSON and exit (import it into Postman, Insomnia or a code generator)",
+    )
     parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=None, help="Enable Flask debug mode")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return parser
@@ -34,8 +44,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     try:
+        features = None
+        if args.features is not None:
+            try:
+                features = parse_features(args.features)
+            except FeatureError as exc:
+                raise ConfigError(f"--features: {exc}") from None
         settings = load_settings(args.config).with_overrides(
-            host=args.host, port=args.port, debug=args.debug, mocks_files=tuple(args.mocks) if args.mocks else None
+            host=args.host, port=args.port, debug=args.debug, mocks_files=tuple(args.mocks) if args.mocks else None,
+            features=features,
         )
         if not 1 <= settings.port <= 65535:
             raise ConfigError(f"--port must be between 1 and 65535, got {settings.port}")
@@ -59,6 +76,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     except ConfigError as exc:
         print(f"mockbox: configuration error: {exc}", file=sys.stderr)
         return 2
+    if args.openapi:
+        with app.test_client() as client:
+            print(json.dumps(client.get("/openapi.json").get_json(), indent=2))
+        return 0
+    log.info("Features: %s", ", ".join(settings.features))
     serve(app, settings.host, settings.port, settings.debug)
     return 0
 
