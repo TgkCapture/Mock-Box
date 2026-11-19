@@ -36,3 +36,9 @@ jobs:
           for i in $(seq 1 20); do curl -fsS http://127.0.0.1:5000/health && break; sleep 1; done
           curl -fsS "http://127.0.0.1:5000/api/users?count=2&seed=ci"
           docker logs mockbox
+      - name: Smoke test feature switches
+        run: |
+          docker run -d --name mockbox-payments -p 5001:5000 -e MOCKBOX_FEATURES=payments mock-box:ci
+          for i in $(seq 1 20); do curl -fsS http://127.0.0.1:5001/health && break; sleep 1; done
+          curl -fsS http://127.0.0.1:5001/api/payments
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5001/api/users)" = "404"
