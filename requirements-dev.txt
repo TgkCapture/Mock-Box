@@ -1,2 +1,4 @@
 -r requirements.txt
 pytest>=8
+waitress>=3
+PyYAML>=6

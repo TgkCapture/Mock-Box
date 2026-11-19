@@ -18,3 +18,7 @@ cors_origins = *
 # Comma-separated admin API keys for /api/admin/*. Empty disables the admin API.
 # [MOCKBOX_ADMIN_API_KEYS]
 admin_api_keys =
+
+[mocks]
+# Comma-separated custom route files (JSON, or YAML with mock-box[yaml]). [MOCKBOX_MOCKS]
+files =
