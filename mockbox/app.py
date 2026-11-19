@@ -45,14 +45,15 @@ def create_app(settings: Optional[Settings] = None, config_path: Optional[str] =
         custom_routes = CustomRoutes(settings.mocks_files)
     except MockFileError as exc:
         raise ConfigError(f"Invalid mocks file: {exc}") from exc
-    Inspector().init_app(app)
+    if "inspector" in settings.features:
+        Inspector().init_app(app)
     custom_routes.init_app(app)
     register_error_handlers(app)
     _register_cors(app, settings.cors_origins)
 
     from .routes import register_routes
 
-    register_routes(app)
+    register_routes(app, settings.features)
     return app
 
 
