@@ -3,6 +3,7 @@
 ## 0.1.0: first public release
 
 ### Breaking changes
+- Requires Python 3.10 or newer (3.9 is end-of-life).
 - The package is renamed from `app` to `mockbox`. Run it with `mockbox`, `python -m mockbox`, or (still supported) `python mock_server.py`.
 - `/api/phone-numbers` now requires authentication. Use `/api/phone-numbers/public` for unauthenticated access.
 - `POST /api/auth/api-key` replaces `GET`, because issuing a key changes server state.

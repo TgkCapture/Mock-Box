@@ -20,7 +20,7 @@ backend can't easily produce.
 
 ## Quick start
 
-Requires Python 3.9+.
+Requires Python 3.10+.
 
 ```bash
 git clone https://github.com/TgkCapture/mock-box.git

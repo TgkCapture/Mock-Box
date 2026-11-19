@@ -9,7 +9,7 @@ description = "A configurable mock API server for testing HTTP clients: realisti
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [{ name = "TgkCapture" }]
 keywords = ["mock", "mock-server", "api", "testing", "flask", "jwt", "oauth"]
 classifiers = [
