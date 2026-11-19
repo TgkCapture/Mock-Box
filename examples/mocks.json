@@ -1,0 +1,14 @@
+{
+  "routes": [
+    {
+      "path": "/v1/hello/{name}",
+      "description": "JSON works too (no extra dependency needed)",
+      "body": { "message": "Hello {{params.name}}!", "request_id": "{{uuid}}" }
+    },
+    {
+      "method": ["PUT", "PATCH"],
+      "path": "/v1/settings",
+      "body": { "updated": true, "received": "{{body.theme | default}}" }
+    }
+  ]
+}

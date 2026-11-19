@@ -1,0 +1,103 @@
+# Mock-Box custom routes. Run with:  mockbox --mocks examples/mocks.yaml
+# Edit this file while the server runs; changes are picked up automatically.
+#
+# Route keys:     method, path, status, headers, body | body_file, content_type, delay_ms,
+#                 auth, mode, responses, description
+# Response keys:  when, status, headers, body | body_file, content_type, delay_ms
+# Placeholders:   {{params.x}} {{query.x}} {{headers.x}} {{body.a.b}} {{uuid}} {{now}} {{date}}
+#                 {{timestamp}} {{name}} {{first_name}} {{last_name}} {{email}} {{phone}}
+#                 {{word}} {{sentence}} {{paragraph}} {{bool}} {{index}}
+#                 {{random.int(1,100)}} {{random.float(0,1)}} {{random.choice(a,b,c)}}
+#                 {{query.page | 1}}  (default when missing)
+
+routes:
+  # 1. A simple static response.
+  - path: /v1/status
+    description: Service status
+    body:
+      status: operational
+      region: af-south-1
+
+  # 2. Path parameters and generated values. A string that is exactly one placeholder keeps
+  #    its type, so "age" is a number and "verified" a boolean.
+  - path: /v1/customers/{id}
+    description: Get a customer
+    body:
+      id: "{{params.id}}"
+      name: "{{name}}"
+      email: "{{email}}"
+      phone: "{{phone}}"
+      age: "{{random.int(18, 80)}}"
+      verified: "{{bool}}"
+      greeting: "Hello {{first_name}}, your id is {{params.id}}"
+
+  # 3. Generated lists with $repeat, sized from the query string (default 3).
+  - path: /v1/customers
+    description: List customers
+    body:
+      data:
+        $repeat: "{{query.limit | 3}}"
+        item:
+          id: "{{index}}"
+          name: "{{name}}"
+          tier: "{{random.choice(free, pro, enterprise)}}"
+      generated_at: "{{now}}"
+
+  # 4. Echo values from the request body, with a custom status and headers.
+  - method: POST
+    path: /v1/customers
+    description: Create a customer
+    status: 201
+    headers:
+      Location: /v1/customers/{{uuid}}
+    body:
+      id: "{{uuid}}"
+      name: "{{body.name}}"
+      email: "{{body.email | unknown@example.com}}"
+      created_at: "{{now}}"
+
+  # 5. Conditional responses: the first matching `when` wins, otherwise the route's own response.
+  - method: POST
+    path: /v1/login
+    description: Login with success and failure cases
+    responses:
+      - when: { body: { username: admin, password: secret } }
+        body: { token: "{{uuid}}", role: admin }
+      - when: { body: { username: "*" } }      # "*" = present with any value
+        status: 401
+        body: { error: invalid_credentials }
+    status: 400
+    body: { error: username_required }
+
+  # 6. Sequences: responses are returned in order, then repeat. Great for retry logic.
+  - path: /v1/flaky
+    description: Fails twice, then succeeds
+    mode: sequence
+    responses:
+      - status: 503
+        headers: { Retry-After: "1" }
+        body: { error: unavailable }
+      - status: 503
+        headers: { Retry-After: "1" }
+        body: { error: unavailable }
+      - body: { ok: true }
+
+  # 7. Require authentication (any, or a list of: jwt, bearer, api_key, basic).
+  - path: /v1/me
+    description: Current user (JWT required)
+    auth: jwt
+    body:
+      user: "{{name}}"
+
+  # 8. Serve a file, and add latency.
+  - path: /v1/reports/latest
+    description: A CSV report served from a file
+    body_file: fixtures/report.csv
+    delay_ms: 300
+
+  # 9. Override a built-in endpoint (custom routes are matched first).
+  - path: /api/products
+    method: [GET]
+    description: Overrides the built-in products endpoint
+    body:
+      - { id: 1, name: Custom product, price: 1.0 }
