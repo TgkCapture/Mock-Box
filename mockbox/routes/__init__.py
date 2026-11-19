@@ -29,6 +29,7 @@ from . import (
     mocks,
     orders,
     pages,
+    payments,
     phone_numbers,
     products,
     rss_feed,
@@ -50,6 +51,7 @@ MOCK_BLUEPRINTS = (
     echo.bp,
     content.bp,
     store.bp,
+    payments.bp,
 )
 
 
