@@ -19,6 +19,10 @@
 - Custom routes from JSON/YAML files (`--mocks`): templated bodies, `$repeat`, conditional and
   sequence responses, auth, files, hot reload, shown in `/docs`; status at `/api/mocks`.
 - `yaml` extra (PyYAML); the Docker image includes it.
+- Simulated payments at `/api/payments`: mobile money (Airtel Money, TNM Mpamba, M-Pesa, MTN MoMo
+  style; pending, then settled) and cards (test numbers, 3-D Secure), signed webhooks, refunds and
+  `Idempotency-Key` support.
+- CORS allows the `Idempotency-Key` request header and exposes `Location` and `Idempotent-Replayed`.
 
 ## 0.1.0: first public release
 

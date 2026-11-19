@@ -11,6 +11,7 @@ backend can't easily produce.
 
 - **Realistic mock data**: users, products, orders, credit lines, activity logs, phone numbers and an RSS feed (JSON or XML).
 - **Controls on every request**: `?count=`, `?seed=` for reproducible output, `?delay=` for latency, and `?status=` to force errors.
+- **Payments**: mobile money and card flows with test numbers, webhooks, refunds and 3-D Secure.
 - **Auth flows to test against**: issue tokens, then call endpoints that accept any scheme or exactly one.
 - **Built-in interactive docs** at `/docs` (Swagger UI) and an OpenAPI spec at `/openapi.json`.
 - **CORS enabled**, so a browser app on another port can call it directly.
@@ -267,6 +268,65 @@ that remembers your changes.
 ```bash
 curl -X POST http://127.0.0.1:5000/api/store/todos -H "Content-Type: application/json" -d '{"title": "Ship v1", "completed": false}'
 curl -X PATCH http://127.0.0.1:5000/api/store/todos/41 -H "Content-Type: application/json" -d '{"completed": true}'
+```
+
+## Payments (`/api/payments`)
+
+Test checkout flows without a sandbox account. Mock-Box simulates mobile money (the
+"enter your PIN on your phone" flow used by Airtel Money, TNM Mpamba, M-Pesa and MTN MoMo)
+and card payments, including webhooks, refunds and 3-D Secure.
+
+| Request | Effect |
+|---------|--------|
+| `POST /api/payments/mobile-money` | Start a mobile money payment. Returns `202` with status `pending`. |
+| `POST /api/payments/cards` | Charge a card. Returns `201` with the final status. |
+| `GET /api/payments/{id}` | Get a payment. Poll this until it leaves `pending`. |
+| `GET /api/payments` | List payments. Supports [pagination, sorting and filtering](#pagination-sorting-and-filtering), e.g. `?filter[status]=failed`. |
+| `POST /api/payments/{id}/complete` | Settle a pending mobile money payment now, optionally with `{"outcome": "cancelled"}`. |
+| `POST /api/payments/{id}/authorize` | Finish 3-D Secure: `{"result": "approve"}` or `{"result": "deny"}`. |
+| `POST /api/payments/{id}/refund` | Refund all of a payment, or part of it with `{"amount": 1000}`. |
+| `DELETE /api/payments` | Delete all payments. |
+
+**Mobile money.** Send `provider` (`airtel`, `mpamba`, `mpesa` or `mtn`), `phone` and `amount`.
+Optional: `currency` (default `MWK`), `reference`, `description`, `metadata`, `callback_url`,
+`callback_secret` and `settle_after_ms` (how long the customer "takes" to approve; default 3000,
+`0` settles immediately). The last three digits of the phone number pick the outcome:
+
+| Phone ends in | Result |
+|---------------|--------|
+| `001` | `failed`: `insufficient_funds` |
+| `002` | `failed`: `cancelled` (customer declined the prompt) |
+| `003` | `expired`: `timeout` (customer never answered) |
+| `004` | `failed`: `account_not_found` |
+| anything else | `succeeded` |
+
+**Cards.** Send `card_number`, `exp_month`, `exp_year`, `cvc` and `amount` (`currency` defaults to `USD`).
+Only the brand and last four digits are stored. Test cards:
+
+| Card number | Result |
+|-------------|--------|
+| `4111 1111 1111 1111`, `5555 5555 5555 4444` | `succeeded` |
+| `4000 0000 0000 1000` | `failed`: `card_declined` |
+| `4000 0000 0000 2008` | `failed`: `insufficient_funds` |
+| `4000 0000 0000 3006` | `failed`: `expired_card` (so does any past expiry date) |
+| `4000 0000 0000 4004` | `failed`: `incorrect_cvc` |
+| `4000 0000 0000 6009` | `failed`: `processing_error` |
+| `4000 0000 0000 5001` | `requires_action` until you call `/authorize` (3-D Secure) |
+| any other Luhn-valid number | `succeeded` |
+
+Instead of a test number, you can force any outcome with `"simulate": "insufficient_funds"` (or another outcome name from the tables).
+
+**Webhooks.** When a payment settles or is refunded, Mock-Box POSTs `{"event": "payment.succeeded", "data": {...payment}}`
+to `callback_url`. Events: `payment.succeeded`, `payment.failed`, `payment.expired` and `payment.refunded`.
+If you set `callback_secret`, the request carries `X-Mockbox-Signature: sha256=<hex HMAC-SHA256 of the raw body>`
+so you can test your signature check. Each delivery attempt (status code or error) is listed in the payment's `webhooks` field.
+
+**Idempotency.** Send an `Idempotency-Key` header and a retried request returns the original payment
+(`200` with `Idempotent-Replayed: true`) instead of charging twice.
+
+```bash
+curl -X POST http://127.0.0.1:5000/api/payments/mobile-money -H "Content-Type: application/json"   -d '{"provider": "airtel", "phone": "+265991234567", "amount": 5000, "callback_url": "http://127.0.0.1:8000/webhooks"}'
+# {"id": "pay_...", "status": "pending", ...}  -> a few seconds later: "succeeded", and your webhook is called
 ```
 
 ## Debugging requests
