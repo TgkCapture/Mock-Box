@@ -11,16 +11,17 @@ from .config import ConfigError, Settings, load_settings
 from .custom_routes import CustomRoutes, MockFileError
 from .errors import register_error_handlers
 from .inspector import Inspector
+from .payments import EXTENSION_KEY as PAYMENTS_KEY, Payments
 from .store import EXTENSION_KEY as STORE_KEY, Store
 
 MAX_REQUEST_BYTES = 10 * 1024 * 1024
 
-CORS_ALLOW_HEADERS = "Authorization, Content-Type, X-API-Key"
+CORS_ALLOW_HEADERS = "Authorization, Content-Type, X-API-Key, Idempotency-Key"
 CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 # Headers browser code may read from responses (pagination, rate limits, etc.).
 CORS_EXPOSE_HEADERS = (
     "Link, X-Total-Count, X-Page, X-Per-Page, X-Total-Pages, X-Next-Cursor, "
-    "Retry-After, WWW-Authenticate"
+    "Retry-After, WWW-Authenticate, Location, Idempotent-Replayed"
 )
 
 
@@ -39,6 +40,7 @@ def create_app(settings: Optional[Settings] = None, config_path: Optional[str] =
     app.extensions[EXTENSION_KEY] = AuthManager(settings.secret_key, settings.admin_api_keys)
 
     app.extensions[STORE_KEY] = Store()
+    app.extensions[PAYMENTS_KEY] = Payments()
     try:
         custom_routes = CustomRoutes(settings.mocks_files)
     except MockFileError as exc:

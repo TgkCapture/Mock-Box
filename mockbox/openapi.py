@@ -76,6 +76,28 @@ _COLLECTION = {"name": "collection", "in": "path", "required": True, "schema": {
 _ITEM_ID = {"name": "item_id", "in": "path", "required": True, "schema": {"type": "string"}, "example": "1"}
 
 
+_PAYMENT_ID = {"name": "payment_id", "in": "path", "required": True, "schema": {"type": "string"}, "example": "pay_0123456789abcdef01234567"}
+_IDEMPOTENCY = {
+    "name": "Idempotency-Key", "in": "header", "required": False, "schema": {"type": "string"},
+    "description": "Repeat a request with the same key to get the original payment back instead of a new one.",
+}
+_CONFLICT = {"409": {"$ref": "#/components/responses/Error"}}
+_MOBILE_MONEY_DESCRIPTION = (
+    "Returns 202 with status `pending`; the payment settles after `settle_after_ms` (default 3000) and a webhook "
+    "is POSTed to `callback_url`, signed with `X-Mockbox-Signature: sha256=<HMAC of the body>` when "
+    "`callback_secret` is set. Providers: `airtel`, `mpamba`, `mpesa`, `mtn`.\n\n"
+    "The phone number's last three digits choose the outcome: `001` insufficient_funds, `002` cancelled, "
+    "`003` timeout (status `expired`), `004` account_not_found; anything else succeeds. "
+    "Or force one with `simulate`."
+)
+_CARD_DESCRIPTION = (
+    "Settles immediately (201). Test cards: `4111111111111111` and `5555555555554444` succeed, "
+    "`4000000000001000` card_declined, `4000000000002008` insufficient_funds, `4000000000003006` expired_card, "
+    "`4000000000004004` incorrect_cvc, `4000000000006009` processing_error, `4000000000005001` requires 3-D Secure "
+    "(status `requires_action`; finish with `/authorize`). Any other Luhn-valid number succeeds."
+)
+
+
 def _query(name: str, description: str, schema: Dict[str, Any]) -> Dict[str, Any]:
     return {"name": name, "in": "query", "required": False, "description": description, "schema": schema}
 
@@ -253,6 +275,71 @@ def build_spec(version: str) -> Dict[str, Any]:
             "patch": _op("Store", "Update fields of an item", params=[_COLLECTION, _ITEM_ID], body=_json_body({"price": 12.5}, "Fields to merge"), extra_errors=_NOT_FOUND),
             "delete": {**_op("Store", "Delete an item", params=[_COLLECTION, _ITEM_ID], extra_errors=_NOT_FOUND), "responses": {"204": {"description": "Deleted"}, **_NOT_FOUND}},
         },
+        # ---------------------------------------------------------------- payments
+        "/api/payments": {
+            "get": _op("Payments", "List payments", listing=True),
+            "delete": _op("Payments", "Delete all payments"),
+        },
+        "/api/payments/mobile-money": {
+            "post": _op(
+                "Payments",
+                "Start a mobile money payment",
+                description=_MOBILE_MONEY_DESCRIPTION,
+                params=[_IDEMPOTENCY],
+                body=_json_body(
+                    {"provider": "airtel", "phone": "+265991234567", "amount": 5000, "currency": "MWK",
+                     "reference": "INV-1001", "callback_url": "http://localhost:8000/webhooks/payments",
+                     "callback_secret": "whsec_test", "settle_after_ms": 3000},
+                    "provider, phone and amount are required",
+                ),
+                ok="202",
+            ),
+        },
+        "/api/payments/cards": {
+            "post": _op(
+                "Payments",
+                "Charge a card",
+                description=_CARD_DESCRIPTION,
+                params=[_IDEMPOTENCY],
+                body=_json_body(
+                    {"card_number": "4111111111111111", "exp_month": 12, "exp_year": 2030, "cvc": "123",
+                     "amount": 25.0, "currency": "USD", "reference": "INV-1002"},
+                    "card_number, exp_month, exp_year, cvc and amount are required",
+                ),
+                ok="201",
+            ),
+        },
+        "/api/payments/{payment_id}": {
+            "get": _op("Payments", "Get a payment (poll this for the final status)", params=[_PAYMENT_ID], extra_errors=_NOT_FOUND),
+        },
+        "/api/payments/{payment_id}/complete": {
+            "post": _op(
+                "Payments",
+                "Settle a pending mobile money payment now",
+                params=[_PAYMENT_ID],
+                body=_json_body({"outcome": "success"}, "Optional outcome override"),
+                extra_errors={**_NOT_FOUND, **_CONFLICT},
+            ),
+        },
+        "/api/payments/{payment_id}/authorize": {
+            "post": _op(
+                "Payments",
+                "Finish 3-D Secure for a card payment",
+                params=[_PAYMENT_ID],
+                body=_json_body({"result": "approve"}, "approve (default) or deny"),
+                extra_errors={**_NOT_FOUND, **_CONFLICT},
+            ),
+        },
+        "/api/payments/{payment_id}/refund": {
+            "post": _op(
+                "Payments",
+                "Refund a payment (fully, or partially with amount)",
+                params=[_PAYMENT_ID],
+                body=_json_body({"amount": 1000, "reason": "requested_by_customer"}, "Omit amount for a full refund"),
+                ok="201",
+                extra_errors={**_NOT_FOUND, **_CONFLICT},
+            ),
+        },
         "/api/credit-lines": {"get": _op("Mock data", "Credit lines", controls=True, listing=True)},
         "/api/user-activities": {"get": _op("Mock data", "User activities", controls=True, listing=True)},
         "/api/rss-feed": {
@@ -313,6 +400,7 @@ def build_spec(version: str) -> Dict[str, Any]:
         "tags": [
             {"name": "Mock data"},
             {"name": "Store", "description": "Stateful CRUD. Changes persist in memory until reset or restart."},
+            {"name": "Payments", "description": "Simulated mobile money and card payments with webhooks."},
             {"name": "Auth", "description": "Obtain test credentials, then click Authorize."},
             {"name": "Admin", "description": "Requires an admin API key from configuration."},
             {"name": "Custom", "description": "Your own routes from the mocks file(s)."},
