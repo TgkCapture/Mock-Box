@@ -8,13 +8,19 @@ Layout::
     /api/inspector/.. inspector  (recorded request history; page at /inspect)
     /api/...          mock data  (all share the ?count/?seed/?delay/?status controls)
 
-To add a mock endpoint: create a module with a Blueprint, add it to ``MOCK_BLUEPRINTS``
-and document it in ``mockbox/openapi.py`` (the test suite checks the two stay in sync).
+Each mock blueprint belongs to a feature (see ``mockbox/features.py``) and is only registered
+when that feature is enabled. To add a mock endpoint: create a module with a Blueprint, add it
+to ``FEATURE_BLUEPRINTS`` and document it in ``mockbox/openapi.py`` (the test suite checks the
+two stay in sync for every feature combination).
 """
 
 from __future__ import annotations
 
+from typing import Iterable
+
 from flask import Blueprint, Flask
+
+from ..features import ALL as ALL_FEATURES
 
 from ..controls import apply_controls
 from . import (
@@ -38,36 +44,47 @@ from . import (
     users,
 )
 
-MOCK_BLUEPRINTS = (
-    phone_numbers.bp,
-    data.bp,
-    products.bp,
-    users.bp,
-    orders.bp,
-    rss_feed.bp,
-    credit_lines.bp,
-    activities.bp,
-    simulate.bp,
-    echo.bp,
-    content.bp,
-    store.bp,
-    payments.bp,
-)
+# Blueprints under /api that share the ?count/?seed/?delay/?status controls, by feature.
+FEATURE_BLUEPRINTS = {
+    "data": (
+        phone_numbers.bp,
+        data.bp,
+        products.bp,
+        users.bp,
+        orders.bp,
+        rss_feed.bp,
+        credit_lines.bp,
+        activities.bp,
+        simulate.bp,
+        content.bp,
+    ),
+    "echo": (echo.bp,),
+    "store": (store.bp,),
+    "payments": (payments.bp,),
+}
 
 
-def register_routes(app: Flask) -> None:
+def register_routes(app: Flask, features: Iterable[str] = ALL_FEATURES) -> None:
+    features = set(features)
     mock = Blueprint("mock", __name__)
     mock.before_request(apply_controls)
-    for bp in MOCK_BLUEPRINTS:
-        mock.register_blueprint(bp)
+    for feature, blueprints in FEATURE_BLUEPRINTS.items():
+        if feature in features:
+            for bp in blueprints:
+                mock.register_blueprint(bp)
 
     api = Blueprint("api", __name__, url_prefix="/api")
-    api.register_blueprint(auth.bp)
-    api.register_blueprint(admin.bp)
-    api.register_blueprint(inspector.bp)
+    if "auth" in features:
+        api.register_blueprint(auth.bp)
+    if "admin" in features:
+        api.register_blueprint(admin.bp)
+    if "inspector" in features:
+        api.register_blueprint(inspector.bp)
+        app.register_blueprint(inspector.page_bp)
     api.register_blueprint(mocks.bp)
     api.register_blueprint(mock)
 
     app.register_blueprint(pages.bp)
-    app.register_blueprint(inspector.page_bp)
+    if "docs" in features:
+        app.register_blueprint(pages.docs_bp)
     app.register_blueprint(api)
