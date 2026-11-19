@@ -36,6 +36,7 @@ class Settings:
     secret_key: str = ""
     admin_api_keys: Tuple[str, ...] = ()
     cors_origins: Tuple[str, ...] = ("*",)
+    mocks_files: Tuple[str, ...] = ()
     # True when no secret was configured and a random one was generated.
     secret_key_generated: bool = False
 
@@ -82,6 +83,7 @@ _FIELDS = (
     ("server", "secret_key", "MOCKBOX_SECRET_KEY", "secret_key", _parse_str),
     ("server", "cors_origins", "MOCKBOX_CORS_ORIGINS", "cors_origins", _parse_list),
     ("auth", "admin_api_keys", "MOCKBOX_ADMIN_API_KEYS", "admin_api_keys", _parse_list),
+    ("mocks", "files", "MOCKBOX_MOCKS", "mocks_files", _parse_list),
 )
 
 
