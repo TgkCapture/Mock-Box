@@ -5,6 +5,7 @@ Layout::
     /                 pages      (home, health, docs, openapi.json)
     /api/auth/...     auth       (token issuing and verification)
     /api/admin/...    admin      (admin-key protected management)
+    /api/inspector/.. inspector  (recorded request history; page at /inspect)
     /api/...          mock data  (all share the ?count/?seed/?delay/?status controls)
 
 To add a mock endpoint: create a module with a Blueprint, add it to ``MOCK_BLUEPRINTS``
@@ -22,6 +23,8 @@ from . import (
     auth,
     credit_lines,
     data,
+    echo,
+    inspector,
     orders,
     pages,
     phone_numbers,
@@ -41,6 +44,7 @@ MOCK_BLUEPRINTS = (
     credit_lines.bp,
     activities.bp,
     simulate.bp,
+    echo.bp,
 )
 
 
@@ -53,7 +57,9 @@ def register_routes(app: Flask) -> None:
     api = Blueprint("api", __name__, url_prefix="/api")
     api.register_blueprint(auth.bp)
     api.register_blueprint(admin.bp)
+    api.register_blueprint(inspector.bp)
     api.register_blueprint(mock)
 
     app.register_blueprint(pages.bp)
+    app.register_blueprint(inspector.page_bp)
     app.register_blueprint(api)

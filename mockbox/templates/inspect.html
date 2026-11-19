@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock-Box Inspector</title>
+  <style>
+    :root {
+      --bg: #f7f7f8; --surface: #ffffff; --text: #1d1d21; --muted: #62626b; --border: #e3e3e8;
+      --accent: #4f46e5; --sel: #eef0ff; --ok: #0f7b4f; --warn: #b45309; --err: #b91c1c;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121214; --surface: #1b1b1f; --text: #ececf0; --muted: #a0a0aa; --border: #2c2c33;
+        --accent: #8b85ff; --sel: #25253a; --ok: #4ade80; --warn: #fbbf24; --err: #f87171;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 14px 16px;
+             border-bottom: 1px solid var(--border); background: var(--surface); }
+    header h1 { font-size: 16px; margin: 0; }
+    header a { color: var(--accent); text-decoration: none; }
+    .spacer { flex: 1; }
+    input, select, button { font: inherit; color: var(--text); background: var(--bg);
+             border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+    button { cursor: pointer; }
+    main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); min-height: calc(100vh - 56px); }
+    @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+    #list { border-right: 1px solid var(--border); overflow: auto; }
+    .row { display: grid; grid-template-columns: 56px 44px minmax(0, 1fr) 64px; gap: 8px; padding: 8px 16px;
+           border-bottom: 1px solid var(--border); cursor: pointer; align-items: baseline; }
+    .row:hover, .row.selected { background: var(--sel); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+    .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .s2 { color: var(--ok); } .s3 { color: var(--muted); } .s4 { color: var(--warn); } .s5 { color: var(--err); }
+    .muted { color: var(--muted); }
+    #detail { padding: 16px; overflow: auto; }
+    #detail h2 { font-size: 15px; margin: 0 0 4px; overflow-wrap: anywhere; }
+    #detail h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 20px 0 6px; }
+    pre { margin: 0; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border);
+          border-radius: 8px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .empty { padding: 32px 16px; color: var(--muted); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Request inspector</h1>
+  <a href="/">Home</a>
+  <span class="spacer"></span>
+  <select id="method" aria-label="Method">
+    <option value="">All methods</option>
+    <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+  </select>
+  <input id="path" placeholder="Filter path" aria-label="Filter path" size="14">
+  <label class="muted"><input type="checkbox" id="live" checked> Live</label>
+  <button id="clear" type="button">Clear</button>
+</header>
+<main>
+  <section id="list"><div class="empty">Waiting for requests to <span class="mono">/api/*</span>&hellip;</div></section>
+  <section id="detail"><div class="empty">Select a request to see its details.</div></section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let entries = [];
+  let selectedId = null;
+
+  function el(tag, attrs, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+    for (const c of children) node.append(c);
+    return node;
+  }
+
+  function statusClass(status) { return "s" + String(status)[0]; }
+
+  function renderList() {
+    const list = $("list");
+    list.replaceChildren();
+    if (!entries.length) {
+      list.append(el("div", { class: "empty" }, "No requests recorded yet. Call any /api/* endpoint."));
+      return;
+    }
+    for (const e of entries) {
+      const row = el("div", { class: "row" + (e.id === selectedId ? " selected" : "") },
+        el("span", { class: "mono muted" }, e.timestamp.slice(11, 19)),
+        el("span", { class: "mono" }, e.method),
+        el("span", { class: "mono path", title: e.path }, e.path + (e.query ? "?" + e.query : "")),
+        el("span", { class: "mono " + statusClass(e.status) }, String(e.status) + " · " + Math.round(e.duration_ms) + "ms"));
+      row.addEventListener("click", () => { selectedId = e.id; renderList(); renderDetail(e); });
+      list.append(row);
+    }
+  }
+
+  function block(title, value) {
+    const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+    return [el("h3", {}, title), el("pre", { class: "mono" }, text)];
+  }
+
+  function renderDetail(e) {
+    const detail = $("detail");
+    detail.replaceChildren(
+      el("h2", { class: "mono" }, e.method + " " + e.path + (e.query ? "?" + e.query : "")),
+      el("div", { class: "muted" }, `${e.timestamp} · status ${e.status} · ${e.duration_ms} ms · ${e.response_size ?? "?"} bytes · from ${e.client}`),
+      ...block("Request headers", e.request_headers),
+      ...block("Request body", e.request_body.size === 0 ? "(empty)"
+        : e.request_body.binary ? `(binary, ${e.request_body.size} bytes)`
+        : e.request_body.text + (e.request_body.truncated ? `\n… truncated (${e.request_body.size} bytes)` : "")),
+      ...block("Response headers", e.response_headers));
+  }
+
+  async function refresh() {
+    const params = new URLSearchParams({ limit: "200" });
+    if ($("method").value) params.set("method", $("method").value);
+    if ($("path").value) params.set("path", $("path").value);
+    try {
+      const resp = await fetch("/api/inspector/requests?" + params);
+      entries = (await resp.json()).requests;
+      renderList();
+    } catch (err) { /* server restarting; try again next tick */ }
+  }
+
+  $("clear").addEventListener("click", async () => {
+    await fetch("/api/inspector/requests", { method: "DELETE" });
+    selectedId = null;
+    $("detail").replaceChildren(el("div", { class: "empty" }, "Select a request to see its details."));
+    refresh();
+  });
+  $("method").addEventListener("change", refresh);
+  $("path").addEventListener("input", refresh);
+  setInterval(() => { if ($("live").checked) refresh(); }, 2000);
+  refresh();
+</script>
+</body>
+</html>

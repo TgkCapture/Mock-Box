@@ -2,7 +2,7 @@ import re
 
 from mockbox.auth import SCHEMES
 
-UNDOCUMENTED = {"/", "/docs", "/openapi.json", "/static/<path:filename>"}
+UNDOCUMENTED = {"/", "/docs", "/openapi.json", "/inspect", "/static/<path:filename>"}
 
 
 def _routes(app):

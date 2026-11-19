@@ -160,6 +160,29 @@ When paginating:
 curl -i "http://127.0.0.1:5000/api/orders?page=2&per_page=5&sort=-total_price&filter[status]=paid"
 ```
 
+## Debugging requests
+
+**Echo.** `/api/echo` (and any sub-path, such as `/api/echo/v1/orders`) accepts `GET`, `POST`,
+`PUT`, `PATCH` and `DELETE` and returns exactly what it received: method, path, query, headers,
+and the body parsed as JSON, form fields, uploaded files (name, type and size) or raw text.
+
+```bash
+curl -X POST "http://127.0.0.1:5000/api/echo/webhooks?debug=1" -H "Content-Type: application/json" -d '{"event": "test"}'
+```
+
+**Inspector.** Open http://127.0.0.1:5000/inspect for a live list of recent `/api/*` requests,
+with headers, body, status and timing. The same data is available as JSON:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/inspector/requests` | Recent requests, newest first. Filter with `?limit=`, `?method=` and `?path=`. |
+| `GET /api/inspector/requests/{id}` | One recorded request. |
+| `DELETE /api/inspector/requests` | Clear the history. |
+
+The history is kept in memory and holds the last 200 requests. Credentials (`Authorization`,
+`X-API-Key`, `Cookie`) are masked in the inspector, but not in echo responses, which only go
+back to the caller. Request bodies are limited to 10 MB; anything larger gets `413`.
+
 ## Authentication
 
 Get a credential from one of the public issuing endpoints, then send it with your request:

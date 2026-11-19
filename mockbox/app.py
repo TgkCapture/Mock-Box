@@ -9,6 +9,9 @@ from flask import Flask, request
 from .auth import EXTENSION_KEY, AuthManager
 from .config import Settings, load_settings
 from .errors import register_error_handlers
+from .inspector import Inspector
+
+MAX_REQUEST_BYTES = 10 * 1024 * 1024
 
 CORS_ALLOW_HEADERS = "Authorization, Content-Type, X-API-Key"
 CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
@@ -28,10 +31,12 @@ def create_app(settings: Optional[Settings] = None, config_path: Optional[str] =
         SECRET_KEY=settings.secret_key,
         DEBUG=settings.debug,
         MOCKBOX_SETTINGS=settings,
+        MAX_CONTENT_LENGTH=MAX_REQUEST_BYTES,
     )
     app.json.sort_keys = False
     app.extensions[EXTENSION_KEY] = AuthManager(settings.secret_key, settings.admin_api_keys)
 
+    Inspector().init_app(app)
     register_error_handlers(app)
     _register_cors(app, settings.cors_origins)
 

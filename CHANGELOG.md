@@ -11,6 +11,9 @@
   (`filter[field]`, `filter[field][op]`), search (`q`) and an optional `{data, meta, links}` envelope
   on list endpoints. Paginated collections are stable across requests.
 - CORS now exposes pagination and auth headers to browser code.
+- `/api/echo` returns the request back (headers, query, JSON, form, files, raw body).
+- Request inspector: live `/inspect` page and `/api/inspector/requests` API with masked credentials.
+- Request bodies are limited to 10 MB (`413` beyond that).
 
 ## 0.1.0: first public release
 

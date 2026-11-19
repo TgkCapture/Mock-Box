@@ -83,6 +83,22 @@ def _json_body(example: Dict[str, Any], description: str) -> Dict[str, Any]:
     }
 
 
+def _echo_ops(subpath: bool = False) -> Dict[str, Any]:
+    params = [{"name": "subpath", "in": "path", "required": True, "schema": {"type": "string"}}] if subpath else []
+    body = {"required": False, "content": {"application/json": {"schema": {}}, "multipart/form-data": {"schema": {"type": "object"}}, "text/plain": {"schema": {"type": "string"}}}}
+    ops = {}
+    for method in ("get", "post", "put", "patch", "delete"):
+        ops[method] = _op(
+            "Debugging",
+            "Echo the request back",
+            description="Returns method, path, query, headers and the parsed body (JSON, form, files or raw text).",
+            controls=False,
+            params=params,
+            body=body if method in ("post", "put", "patch") else None,
+        )
+    return ops
+
+
 def build_spec(version: str) -> Dict[str, Any]:
     paths = {
         # ---------------------------------------------------------------- auth
@@ -202,6 +218,29 @@ def build_spec(version: str) -> Dict[str, Any]:
                 ok="default",
             )
         },
+        # ---------------------------------------------------------------- debugging
+        "/api/echo": _echo_ops(),
+        "/api/echo/{subpath}": _echo_ops(subpath=True),
+        "/api/inspector/requests": {
+            "get": _op(
+                "Debugging",
+                "Recent requests (newest first)",
+                params=[
+                    _query("limit", "Max entries (1-1000, default 50)", {"type": "integer"}),
+                    _query("method", "Only this HTTP method", {"type": "string"}),
+                    _query("path", "Only paths containing this text", {"type": "string"}),
+                ],
+            ),
+            "delete": _op("Debugging", "Clear request history"),
+        },
+        "/api/inspector/requests/{entry_id}": {
+            "get": _op(
+                "Debugging",
+                "One recorded request",
+                params=[{"name": "entry_id", "in": "path", "required": True, "schema": {"type": "integer"}}],
+                extra_errors={"404": {"$ref": "#/components/responses/Error"}},
+            )
+        },
         # ---------------------------------------------------------------- service
         "/health": {"get": _op("Service", "Health check")},
     }
@@ -220,6 +259,7 @@ def build_spec(version: str) -> Dict[str, Any]:
             {"name": "Auth", "description": "Obtain test credentials, then click Authorize."},
             {"name": "Admin", "description": "Requires an admin API key from configuration."},
             {"name": "Errors"},
+            {"name": "Debugging", "description": "Echo requests and inspect recent traffic (UI at /inspect)."},
             {"name": "Service"},
         ],
         "paths": paths,
